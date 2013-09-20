@@ -1,0 +1,35 @@
+SubRoutineHistory = 'DBASRexxBaseErrors' SubRoutineHistory
+txt = arg(1)
+say txt
+if rc <> '' then do
+   do i = 1 to rexxbase.error.0
+      say 'REXXBase Error Codes: 'rexxbase.error.i
+      end
+   end
+
+parse var SubRoutineHistory . SubRoutineHistory
+return 1
+
+rc1=rexxbase_writedbf('dbfout')
+if rc1\='' then do
+   txt= 'Attempting to write .dbf file: 'rc1
+   rc2=DBASRexxBaseError(txt)
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+
+rc1=rexxbase_createdbf('DBFout') 
+if rc1\='' then do
+   txt= 'Attempting to create .dbf file: 'rc1
+   rc2=DBASRexxBaseError(txt)
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+
+rc1 = rexxbase_opendbf("dbfin")
+if rc1\='' then do
+   txt = 'Attempting to open .dbf file: 'rc1
+   rc2=DBASRexxBaseError(txt)
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end

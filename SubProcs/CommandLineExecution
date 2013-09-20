@@ -1,0 +1,39 @@
+/* Select a quote at random. */
+
+in     = arg(1)
+format = arg(2)
+
+SubRoutineHistory = 'CommandLineExecution' SubRoutineHistory
+
+CommandASCIIout = in||".ExportStatus"
+rc=dosdel(CommandASCIIout)
+rc=time('r')
+
+rc= RxSetPriority('P','I',20,PID)
+
+select
+   when translate(strip(format))='FLATBSQ' then do
+      out             = infile'.FLATBSQ'
+      rc=dosdel(out)
+      CommandLineExecution='YES'
+      rc=OutputFlatBSQ(infile,out,0,0,0,0,,ByteOrder)
+      end
+
+   when translate(strip(format))='FLATBIL' then do
+      out             = infile'.FLATBIL'
+      rc=dosdel(out)
+      CommandLineExecution='YES'
+      rc=OutputFlatBIL(infile,out,0,0,0,0,ByteOrder)
+      end
+
+   otherwise do
+      txt1 = 'Maybe you should read the manual.   Hmmm?'
+      txt2 = 'You have requested an unknown export format.'
+      rc=lineout(CommandASCIIout, date() time() txt1)
+      rc=lineout(CommandASCIIout, '                ' txt2)
+      rc=lineout(CommandASCIIout)
+      end
+
+   end /* end select */
+
+return 1

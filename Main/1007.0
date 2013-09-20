@@ -1,0 +1,14 @@
+/* Event List Box ORDER, Clicked/selected */
+Arg window self
+
+index=VpGetIndex(window,'ORDER','SELECTED',0)
+
+/* Set top index FIELDNAMES List Box */
+CALL VpSelect window,'FIELDNAMES',index,1
+CALL VpItem window,'FIELDNAMES','SENDMSG','0x0162',index,'0'
+
+CALL VpSelect window,'DEFINITION',index,1
+CALL VpItem window,'DEFINITION','SENDMSG','0x0162',index,'0'
+
+CALL VpSelect window,'ORDER',index,1
+CALL VpItem window,'ORDER','SENDMSG','0x0162',index,'0'

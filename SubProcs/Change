@@ -1,0 +1,22 @@
+/* --- begin subroutine - Change:                               -------------*/
+/*Here's my [Mike Cowlishaw] CHANGE.REX (circa 1982). It should be reasonably*/
+/*fast on most platforms.                                                    */
+/*Provided to Dick Thaxter <rtha@loc.gov> Thu Aug 20 08:32:23 1998 in        */
+/*comp.lang.rexx  Comments edited by DLR Aug 20, 1998.                       */
+/* CHANGE(string,old,new)                                                    */
+/* Changes all occurrences of "old" in "string" to "new".                    */
+/* If "old"=='', then "new" is prefixed to "string".  MFC                    */
+
+Change: procedure
+parse arg string, old, new
+if old='' then return new||string
+out=''
+do while pos(old,string)\=0
+   parse var string prefix (old) string
+   out=out||prefix||new
+   end
+return out||string
+/* --- end subroutine  - Change:                                -------------*/
+/* --------------------------------------------------------------------------*/
+
+

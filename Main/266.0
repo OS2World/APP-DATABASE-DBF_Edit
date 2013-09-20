@@ -1,0 +1,64 @@
+/* Menu events - Copy */
+Arg window self
+
+SubRoutineHistory = 'Menu_Fields_Copy' SubRoutineHistory
+
+index=VpGetIndex(window,'FIELDNAMES','SELECTED',0)
+if index=0  | datatype(Order.index,'W')\=1 then do
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+
+/* index is set in the menu items edit (fieldnames), edit (defintions) and insert new. */
+/* Move all the items higher than index up 1. */
+      
+if Order.0=255 then do
+   txt1 = 'You can not do this!'
+   txt2 = 'You can not have more than 128 fields in a .DBF file.'
+   response=VpMessageBox(window,txt1,txt2)
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+do i = Order.0 to index+1 by -1
+   ip1 = i +1
+   FieldName.ip1  = FieldName.i
+   Definition.ip1 = Definition.i
+   Order.ip1      = Order.i         
+   end i
+
+ip1 = index +1
+FieldName.ip1          = strip(left(FieldName.index,9))||2
+Definition.ip1 = Definition.index
+Order.ip1      = Order.index
+FieldName.0    = Order.0 + 1
+Definition.0   = Order.0 + 1
+Order.0        = Order.0 + 1
+   
+CALL VpDeleteItem window,'FIELDNAMES','ALL'
+CALL VpDeleteItem window,'DEFINITION','ALL'
+CALL VpDeleteItem window,'ORDER','ALL'
+
+index=VpAddItem(window, 'FIELDNAMES', 'LIST', 'FieldName.')
+index=VpAddItem(window, 'DEFINITION', 'LIST', 'Definition.')
+index=VpAddItem(window, 'ORDER', 'LIST', 'Order.')
+
+CALL VpSelect window,'FIELDNAMES',ip1,1
+CALL VpSelect window,'DEFINITION',ip1,1
+CALL VpSelect window,'ORDER',ip1,1
+
+CALL VpItem window,'FIELDNAMES','SENDMSG','0x0162',index,'0'
+CALL VpItem window,'DEFINITION','SENDMSG','0x0162',index,'0'
+CALL VpItem window,'ORDER','SENDMSG','0x0162',index,'0'
+
+
+parse var SubRoutineHistory . SubRoutineHistory
+
+/* Check the item  MENU_FIELDS_COPY Menu Item */
+CALL VpSelect window,'MENU_FIELDS_MOVEUP',0
+CALL VpSelect window,'MENU_FIELDS_MOVEDOWN',0
+CALL VpSelect window,'MENU_FIELDS_COPY',1
+CALL VpSelect window,'MENU_FIELDS_EDIT',0
+CALL VpSelect window,'MENU_FIELDS_INSERT',0
+
+return 1
+

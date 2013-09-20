@@ -1,0 +1,83 @@
+/* This routine writes raster data in an ELAS file.  It is intended to write */
+/* a single window of data to a n channels with each call.  Data are received*/
+/* in a compound array called DataOut.h.i.j, the tail is equal to the        */
+/* tempChannel.element.line.  The temporary channel is replaced by the target*/
+/* channel when the data are written.  Thus if                               */
+/*    Channels2PListout.0=4                                                  */
+/*    Channels2PListout.1=5                                                  */
+/*    Channels2PListout.2=2                                                  */
+/*    Channels2PListout.3=1                                                  */
+/*    Channels2PListout.4=7                                                  */
+/* Then the data in Data.1. will be written to channel 5, Data.2. will be    */
+/* written to channel 2, Data.3. to channel 1 and Data.4. to channel 7.      */
+/*                                                                           */
+/* Doug Rickman June 23, 1998;  Multi-channel May 30, 1999; Integer patch    */
+/* Sept 9, 99 & Jan20, 2000.                                                 */
+/*    _______________________________________________________________        */
+
+procedure expose out DataOut.,
+                 InitialElement2Pout LastElement2Pout InitialLine2Pout LastLine2Pout,
+                 Channels2PListout.,
+                 InitialElementOut   LastElementOut   InitialLineOut   LastLineOut,
+                 NChannelsOut,
+                 BperLineOut         NBperElementOut   DataTypeCodeOut,
+                 GenericErrorQUIET SubRoutineHistory 
+
+SubRoutineHistory = 'WriteELASDataWindow' SubRoutineHistory
+
+rc=stream(out,'C','OPEN')
+select 
+   when DataTypeCodeOut=1  then call OutputInteger
+   when DataTypeCodeOut=16 &,
+      NBperElementOut=4    then call Output32bitFP
+   otherwise do
+      say 'Storage format is unsupported at this time.'
+      parse var SubRoutineHistory . SubRoutineHistory
+      return 0
+      end
+   end /* end select */
+/* close the file */
+rc=stream(out,'C','CLOSE')
+parse var SubRoutineHistory . SubRoutineHistory
+return 1
+
+OutputInteger:
+ElementOffset= (InitialElement2Pout-InitialElementOut)*NBperElementOut
+do h = 1 to Channels2PListout.0
+   ChannelOffset=(Channels2PListout.h-1)*BperLineOut
+   do j = InitialLine2Pout to LastLine2Pout
+      LineOffset=NChannelsOut*BperLineOut*(j-InitialLineOut)
+      Offset=LineOffset+ChannelOffset+ElementOffset+1024+1
+      rc=stream(out,'C','seek ='Offset)
+      data=''
+      do i = InitialElement2Pout to LastElement2Pout
+         DataTemp=trunc(DataOut.h.i.j)
+         data=data||d2c(DataTemp,NBperElementOut)
+         end i
+      rc=charout(out,data,)
+      end j /* end Line loop */
+   end h /* Channel loop */
+parse var SubRoutineHistory . SubRoutineHistory
+return 1
+
+Output32bitFP:
+ElementOffset= (InitialElement2Pout-InitialElementOut)*NBperElementOut
+do h = 1 to Channels2PListout.0
+   ChannelOffset=(Channels2PListout.h-1)*BperLineOut
+   do j = InitialLine2Pout to LastLine2Pout
+      LineOffset=NChannelsOut*BperLineOut*(j-InitialLineOut)
+      Offset=LineOffset+ChannelOffset+ElementOffset+1024+1
+
+      rc=stream(out,'C','seek ='Offset)
+      data=''
+      do i = InitialElement2Pout to LastElement2Pout
+         datatemp=f2c(DataOut.h.i.j,4)
+         data=data||reverse(datatemp)
+         end i
+      rc=charout(out,data)
+      end j /* end Line loop */
+   end h /* Channel loop */
+
+parse var SubRoutineHistory . SubRoutineHistory
+
+return 1

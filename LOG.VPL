@@ -1,0 +1,9 @@
+00005180
+2000-06-30; 18:37:55; DOUG RICKMAN; DEL; DBF_EDIT\Main-B&W BW_RB - Clicked/selected; ; <Main\1029.0>
+2000-07-10; 15:22:23; DOUG RICKMAN; CHG; DBF_EDIT\Main-Event Menu events, ~Input 	CNTRL i; ; <Main\261.0>
+2000-07-11; 10:51:04; DOUG RICKMAN; CHG; DBF_EDIT\Main-Event Procedure files, IniSetupDefaults; ; <SUBPROCS\IniSetupDefaults>
+2000-07-11; 10:52:24; DOUG RICKMAN; CHG; DBF_EDIT\FIPS-Form help info; ; <FIPS\Form.fin>
+2000-07-11; 10:52:38; DOUG RICKMAN; CHG; DBF_EDIT\parse-Form help info; ; <parse\Form.fin>
+2000-07-11; 10:52:56; DOUG RICKMAN; CHG; DBF_EDIT\Main-Form help info; ; <Main\Form.fin>
+2000-07-11; 12:41:34; DOUG RICKMAN; CHG; DBF_EDIT\Main-Event Cancel NEW_CANCEL, Clicked/selected; ; <Main\1015.0>
+2000-07-11; 13:04:49; DOUG RICKMAN; CHG; DBF_EDIT\Main-Event Form events, Opened; ; <Main\Form.1>

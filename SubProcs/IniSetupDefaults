@@ -1,0 +1,18 @@
+/* List the keys and default values that shall exist in the ini file.        */
+KeysList= 'InputFile'                "*.dbf" ';',
+          'OutputFile'               '*.dbf' ';',
+          'ImportFile'               '*.dbf' ';',
+          'ExportFile'               '*.txt' ';',
+          'FIPSFile'        'FIPS_codes.txt' ';',
+          'OutputFormat'          "FLAT_BIL" ';',
+          'ParseKeyString'          'string' ';',
+          'ParseKeyNumber'                 2 ';',
+          'READDATA_CB'                    0 ';',
+          'SKIPDELETED_CB'                 1 ';',
+          'MainWindowSizeX'              360 ';',
+          'MainWindowSizeY'              640 ';',
+          'MainWindowPositionX'           10 ';',
+          'MainWindowPositionY'           10 ';'
+
+return 1
+

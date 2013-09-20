@@ -1,0 +1,31 @@
+/* Event  PARSE_KEY, Leave */
+Arg window self
+
+ParseKey = VpGetItemValue(window,'PARSE_KEY')
+
+if topic = 'STRING' then do
+   OldKey=sysini(INIFile,MasterM,'ParseKeyString',ParseKey)
+   end
+else do 
+   OldKey=sysini(INIFile,MasterM,'ParseKeyNumber',ParseKey)
+   end
+
+If ParseKey=OldKey then return 1
+
+
+if topic = 'STRING' then nop
+   
+if topic = 'POSITION' & datatype(ParseKey,'W')\=1 then do
+   Txt1 = 'The job is not going to get done this way.'
+   Txt2 = 'You must enter a single, positive, whole number.'
+   response=VpMessageBox(window,Txt1,Txt2)
+   CALL VpSetItemValue window,'PARSE_KEY',''
+   end
+
+
+if topic = 'STRING' then do
+   rc=sysini(INIFile,MasterM,'ParseKeyString',ParseKey)
+   end
+else do 
+   rc=sysini(INIFile,MasterM,'ParseKeyNumber',ParseKey)
+   end

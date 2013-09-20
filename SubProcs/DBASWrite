@@ -1,0 +1,197 @@
+/* Read each line and parse into variables.     */
+procedure expose FieldName. Definition. Order. Magic. window SubRoutineHistory,
+  State. County.  
+
+SubRoutineHistory = 'DBASWrite' SubRoutineHistory
+
+dbfin  = arg(1)
+dbfout = arg(2)
+
+CALL VpItem window,'MESSAGE','FORECOLOR','RED'
+CALL VpSetItemValue window,'MESSAGE','Writing database file.'
+
+drop TrueLength.
+
+/* Create the output database file.  */
+DBFout.fieldcount = strip(Order.0)
+do i = 1 to Order.0
+   Order.i     = strip(Order.i)
+   FieldNameTemp.i = translate(strip(FieldName.i))
+   v               = FieldNameTemp.i
+   if left(v,1)='_' then do
+      /* REXXBASE can not properly handle field names starting with '_'.     */
+      /* Therefore we record the need for a patch here and do the patch      */
+      /* after writing the data.                                             */
+      TrueLength.i       = length(v)
+      v = strip(v,'L','_')
+      end
+   parse var Definition.i FieldType FieldLength
+   FieldType   = left(strip(FieldType),1)
+   FieldLength = strip(FieldLength)
+
+   DBFout.fieldname.i = v
+   DBFout.v.type      = FieldType
+   DBFout.v.length    = FieldLength
+   end i
+
+rc=DBASStructureCheck()
+if rc \=1 then do 
+   txt1='The database can not be made this way.'
+   parse var rc . txt2
+   response=VpMessageBox(window,txt1,txt2)
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+
+rc1=rexxbase_createdbf('DBFout') 
+if rc1\='' then do
+   txt= 'Attempting to create .dbf file: 'rc1
+   rc2=DBASRexxBaseError(txt)
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+
+
+/* Read the input database structure. */
+rc1 = rexxbase_opendbf("dbfin")
+if rc1\='' then do
+   txt = 'Attempting to open .dbf file: 'rc1
+   rc2=DBASRexxBaseError(txt)
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+do j = 1 to dbfin.fieldcount
+   FieldNameIn.j = translate(dbfin.FieldName.j)
+   w          = translate(dbfin.fieldname.j)
+   typeIn.j   = dbfin.w.type  
+   lengthIn.j = dbfin.w.length
+   
+   DefinitionIn.j=right(typeIn.j,8) right(lengthIn.j,8)
+   OrderIn.j     =right(j,4)
+   end j
+
+FieldNameIn.0  = dbfin.fieldcount
+DefinitionIn.0 = dbfin.fieldcount
+OrderIn.0      = dbfin.fieldcount
+
+/* Magic. is edited once for each record.  We need a backup of the original. */
+do i = 1 to Magic.0
+   MagicBackup.i=Magic.i
+   end i
+
+
+
+/* Write the output records.  */
+do RecordN = 1 to dbfin.recordcount
+   /* Recover the unedited version of Magic. */
+   do i = 1 to Magic.0
+      Magic.i = MagicBackup.i
+      end i
+
+   rc=rexxbase_ReadDBF("dbfin")
+   /* Read the input record.  Store value of each field in ValueIn.j */
+   do j = 1 to FieldNameIn.0
+      vIn = FieldNameIn.j
+      ValueIn.j   = dbfin.vIn
+      end j
+
+   /* Based on the new order information write a new record out. */
+   do h = 1 to Order.0
+      FieldNameOut = DBFout.fieldname.h
+      index        = Order.h
+      if datatype(index,'W') \= 1 then do
+         if value(index) = 'Complete' then nop /* This magic number is done. */
+         else do
+            rc=value('vv',index)
+            rc=MagicMaster(vv,RecordN)
+            if rc = 1 then do
+               rc=value(index,'Complete')
+               end
+            else do
+               say 'Something wrong in DBASWrite'
+               return 0
+               end
+            end /* else do ... */
+         end /* if datatype(index,'W') \= 1 ... */
+      else 
+         DBFout.FieldNameOut = ValueIn.Index
+      end h
+
+   rc1=rexxbase_writedbf('dbfout')
+   if rc1\='' then do
+      txt= 'Attempting to write .dbf file: 'rc1
+      rc2=DBASRexxBaseError(txt)
+      parse var SubRoutineHistory . SubRoutineHistory
+      return 0
+      end
+
+   CALL VpSetItemValue window,'MESSAGE',right(RecordN,6)'/'left(dbfin.recordcount,6)
+   end RecordN
+
+rc=rexxbase_closedbf("dbfin")
+rc=rexxbase_closedbf('dbfout') 
+
+/* Now patch the names if necessary. */
+do i = 1 to Order.0
+   if datatype(TrueLength.i,'W') then do
+      /* Patch the name. */
+      rc=stream(dbfout,'c','open')
+      WritePosition=stream(dbfout,'c','seek = 'i*32 + 1 )
+      v = right(DBFout.fieldname.i,TrueLength.i,'_')
+      rc=charout(dbfout,v)
+      rc=stream(dbfout,'c','close')
+      end
+   end i
+
+CALL VpSetItemValue window,'MESSAGE',''
+parse var SubRoutineHistory . SubRoutineHistory
+return 1
+
+
+
+MagicMaster:
+procedure expose DBFout. dbfin. Magic. State. County.
+vv      = arg(1)
+RecordN = arg(2)
+
+v=value(vv)
+parse var v MagicRoutine Stuff
+   select
+      when MagicRoutine = 'MagicRoutines_ParseString' then do
+         parse var Stuff index '08'x ParseKey '08'x FieldName1 FieldName2
+         index      = strip(index)
+         FieldName2 = strip(FieldName2)
+         rc = MagicRoutines_ParseString(dbfin,index,ParseKey,RecordN)
+         DBFout.FieldName1 = ReturnValue.1
+         DBFout.FieldName2 = ReturnValue.2
+         end /* when ... */
+
+      when MagicRoutine = 'MagicRoutines_ParsePosition' then do
+         parse var Stuff index '08'x ParseKey '08'x FieldName1 FieldName2
+         index      = strip(index)
+         FieldName2 = strip(FieldName2)
+         rc = MagicRoutines_ParsePosition(dbfin,index,ParseKey,RecordN)
+         DBFout.FieldName1 = ReturnValue.1
+         DBFout.FieldName2 = ReturnValue.2
+         end /* when ... */
+        
+      when MagicRoutine = 'MagicRoutines_DLGFIPS2StateNCounty' then do
+         parse var Stuff index FieldName1 FieldName2
+         FieldName2 = strip(FieldName2)
+         MagicReturn=MagicRoutines_FIPSState_N_County(dbfin,index,topic,RecordN)
+
+         if left(MagicReturn,1)\=1 then do
+            DBFout.FieldName1 = 'ERRROR'
+            DBFout.FieldName2 = 'ERRROR'
+            return 1
+            end
+         parse var MagicReturn . StateKey CountyKey
+         DBFout.FieldName1 = State.StateKey
+         DBFout.FieldName2 = County.StateKey.CountyKey
+         end /* when ... */ 
+        
+               
+      otherwise say 'What kind of Magic is this Doug?'
+      end /* select */
+
+return 1

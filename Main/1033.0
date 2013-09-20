@@ -1,0 +1,16 @@
+/* Event AF AF_CB, Clicked/selected */
+Arg window self
+
+
+if VpIsSelected(window,'READDATA_CB') then do
+   rc=sysini(INIFile,MasterM,'READDATA_CB',1)
+   CALL VpSetItemValue window,'READDATA_CB','Yes'
+   end
+
+else do
+   rc=sysini(INIFile,MasterM,'READDATA_CB',0)
+   CALL VpSetItemValue window,'READDATA_CB','No'
+   CALL VpItem window,'RECORD_NUMBER','DISABLE'
+   end   
+   
+   

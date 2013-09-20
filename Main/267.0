@@ -1,0 +1,37 @@
+/* Menu events - Delete */
+Arg window self
+
+index=VpGetIndex(window,'FIELDNAMES','SELECTED',0)
+
+if index=0  then return 0
+if datatype(Order.index,'W')\=1 then return 0
+
+/* Move all the items higher than index down 1. */
+    
+do i = index to Order.0
+   ip1 = i +1
+   FieldName.i  = FieldName.ip1
+   Definition.i = Definition.ip1
+   Order.i      = Order.ip1         
+   end i
+
+FieldName.0    = Order.0 - 1
+Definition.0   = Order.0 - 1
+Order.0        = Order.0 - 1
+      
+CALL VpDeleteItem window,'FIELDNAMES','ALL'
+CALL VpDeleteItem window,'DEFINITION','ALL'
+CALL VpDeleteItem window,'ORDER','ALL'
+
+index=VpAddItem(window, 'FIELDNAMES', 'LIST', 'FieldName.')
+index=VpAddItem(window, 'DEFINITION', 'LIST', 'Definition.')
+index=VpAddItem(window, 'ORDER', 'LIST', 'Order.')
+
+CALL VpSelect window,'FIELDNAMES',ip1,1
+CALL VpSelect window,'DEFINITION',ip1,1
+CALL VpSelect window,'ORDER',ip1,1
+
+CALL VpItem window,'FIELDNAMES','SENDMSG','0x0162',index,'0'
+CALL VpItem window,'DEFINITION','SENDMSG','0x0162',index,'0'
+CALL VpItem window,'ORDER','SENDMSG','0x0162',index,'0'
+

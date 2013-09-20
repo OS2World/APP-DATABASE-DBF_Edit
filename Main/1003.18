@@ -1,0 +1,60 @@
+/* Event Spin Button RECORD_NUMBER, Slider/spin tracking */
+Arg window self
+
+
+Record_Number_SpinTracking:
+
+
+/* Disable item RECORD_NUMBER Spin Button */
+CALL VpItem window,'RECORD_NUMBER','DISABLE'
+
+
+/* Get item value RECORD_NUMBER Spin Button */
+RecordN = VpGetItemValue(window,'RECORD_NUMBER')
+CALL VpItem window,'FIELDNAMES','DISABLE'
+CALL VpItem window,'DEFINITION','DISABLE'
+CALL VpItem window,'ORDER','DISABLE'
+
+dbfin = in
+rc1 = rexxbase_opendbf("dbfin")
+if rc1\='' then do
+   txt = 'Attempting to open .dbf file: 'rc1
+   rc2=DBASRexxBaseError(txt)
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+
+rc=rexxbase_GoToRecord("dbfin",RecordN)
+rc=rexxbase_closedbf("dbfin")
+
+if dbfin.RECORDSTATUS = 'Deleted' then do
+   CALL VpItem window,'MESSAGE','FORECOLOR','RED'
+   txt = 'This record is marked as deleted.'
+   CALL VpSetItemValue window,'MESSAGE',txt
+   end
+
+else do
+   CALL VpItem window,'MESSAGE','FORECOLOR','RED'
+   txt = ''
+   CALL VpSetItemValue window,'MESSAGE',txt
+   end
+
+index=VpGetIndex(window,'ORDER','SELECTED',0)
+index = strip(Order.Index)
+if datatype(index,'W')\=1 then do
+   CALL VpSetItemValue window,'RECORD_CONTENTS','This field not in input database.'
+   end
+
+else do
+   w = translate(strip(dbfin.FieldName.index))
+   CALL VpSetItemValue window,'RECORD_CONTENTS',dbfin.w
+   end
+
+
+CALL VpItem window,'RECORD_NUMBER','ENABLE'
+CALL VpItem window,'FIELDNAMES','ENABLE'
+CALL VpItem window,'DEFINITION','ENABLE'
+CALL VpItem window,'ORDER','ENABLE'
+   
+   
+return 1

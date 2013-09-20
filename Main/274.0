@@ -1,0 +1,10 @@
+/* Menu events - poof */
+Arg window self
+
+if flashNPoof=1 then do
+   say 'After "flash" I would have thought you had learned.  OK, here it is: poof.'
+   end
+else 
+   say 'poof'
+
+flashNPoof=1

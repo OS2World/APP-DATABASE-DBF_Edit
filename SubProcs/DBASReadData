@@ -1,0 +1,91 @@
+/* Read each line and parse into variables.                                  */
+/* Returns                                                                   */
+/*    1  - Everything OK.  Total Num of records, N good and N deleted also.  */
+/*   -1  - Error opening file.                                               */
+/* Variables set: Deleted. dbfin.                                            */ 
+/* Doug Rickman July 6, 2000                                                 */
+
+procedure expose dbfin. REXXBASE.
+
+SubRoutineHistory = 'ReadDBASData' SubRoutineHistory 
+
+dbfin = arg(1)
+read  = arg(2)
+
+/* Open database if possible.                                                */
+rc = rexxbase_closedbf("dbfin")
+rc1 = rexxbase_opendbf("dbfin")
+if rc1\='' then do
+   txt = 'Attempting to open .dbf file: 'rc1
+   rc2=DBASRexxBaseError(txt)
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+
+/* Determine the number of good and deleted records. Store list of deleted   */
+/* records in the variable "Deleted."                                        */
+j=0
+do i = 1 to dbfin.recordcount
+   rc=rexxbase_ReadDBF("dbfin")
+   if rc='BOF' then leave i
+
+   if dbfin.RECORDSTATUS \= '' then do
+      select 
+         when dbfin.RECORDSTATUS = 'Deleted' then do
+            j=j+1
+            Deleted.j = i
+            /* say 'Deleted at ' i */
+            end
+         otherwise do
+            say 'In ReadDBASData() - Something unexpected in record status.'
+            end
+         end /* end select */
+      end /* if dbfin.RECORDSTATUS \= '' ... */
+   end i
+
+rc=rexxbase_closedbf("dbfin")
+
+Deleted.0=j
+
+if REXXBASE.SKIPDELETED = 'ON' then do
+   Deleted = dbfin.recordcount - i+1
+   GoodRecords = i-1
+   end
+else do  
+   GoodRecords = i-1 - Deleted.0
+   end
+
+if Read='NO' then do
+   parse var SubRoutineHistory . SubRoutineHistory
+   return  1 dbfin.recordcount GoodRecords Deleted.0
+   end
+
+
+/* Read the database into memory. The current DBF_edit does not need this.   */
+rc = rexxbase_opendbf("dbfin")
+if REXXBASE.SKIPDELETED = 'ON' then 
+   v = GoodRecords
+else 
+   v = dbfin.recordcount
+
+dbfin.0 = v
+   
+do i = 1 to dbfin.0
+   rc=rexxbase_ReadDBF("dbfin")
+
+   stuff =''
+   do j = 1 to dbfin.fieldcount
+      w         = translate(dbfin.fieldname.j)
+      dbfin.v.i = dbfin.w
+      stuff     = stuff dbfin.w
+      end j
+   /* say left(i,5) i stuff */
+   end i
+
+rc=rexxbase_closedbf("dbfin")
+
+
+parse var SubRoutineHistory . SubRoutineHistory
+
+return 1 dbfin.recordcount GoodRecords Deleted.0
+ 

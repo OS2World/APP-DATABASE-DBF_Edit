@@ -1,0 +1,36 @@
+/* Menu events - Move Down */
+Arg window self
+
+index=VpGetIndex(window,'FIELDNAMES','SELECTED',0)
+
+if index=Order.0 then return 0
+
+ip1            = index+1
+temp1          = FieldName.ip1
+temp2          = Definition.ip1
+temp3          = Order.ip1
+FieldName.ip1  = FieldName.index
+Definition.ip1 = Definition.index
+Order.ip1      = Order.index
+FieldName.index  = temp1
+Definition.index = temp2
+Order.index      = temp3
+
+CALL VpDeleteItem window,'FIELDNAMES','ALL'
+CALL VpDeleteItem window,'DEFINITION','ALL'
+CALL VpDeleteItem window,'ORDER','ALL'
+
+index=VpAddItem(window, 'FIELDNAMES', 'LIST', 'FieldName.')
+index=VpAddItem(window, 'DEFINITION', 'LIST', 'Definition.')
+index=VpAddItem(window, 'ORDER', 'LIST', 'Order.')
+
+CALL VpSelect window,'FIELDNAMES',ip1,1
+CALL VpSelect window,'DEFINITION',ip1,1
+CALL VpSelect window,'ORDER',ip1,1
+
+/* Check the item  MENU_FIELDS_MOVEDOWN Menu Item */
+CALL VpSelect window,'MENU_FIELDS_MOVEUP',0
+CALL VpSelect window,'MENU_FIELDS_MOVEDOWN',1
+CALL VpSelect window,'MENU_FIELDS_COPY',0
+CALL VpSelect window,'MENU_FIELDS_EDIT',0
+CALL VpSelect window,'MENU_FIELDS_INSERT',0

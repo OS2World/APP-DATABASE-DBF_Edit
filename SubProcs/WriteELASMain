@@ -1,0 +1,97 @@
+/* --------------------------------------------------------------------------*/
+/* --- begin subroutine - WriteELASMain:                        -------------*/
+/*                  WRITE OUT THE ELAS HEADER                                */
+/* Bytes in header  - Bytes per line - Initial Line    - LastLine            */
+/* Initial Element  - Last Element   - No. of Channels - ELAS ID flag        */
+/* YCD              - YOF            - XCD             - XOF                 */
+/* Ht               - Wid            - Tran1           - Tran2               */
+/* Tran3            - Tran4          - Word 19         - blank               */
+/* blank            - Eikonix flag   - Labl status     - Created by module   */
+/* words 25-120 - comments            121-249 ColorTable                     */
+/* note ELAS floating point values are byte swapped. */
+
+out=arg(1)
+
+SubRoutineHistory = 'WriteELASMain' SubRoutineHistory
+
+rc=stream(out,'C','OPEN')
+if rc<>'READY:' then do
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 'File could not be made ready.'
+   end
+
+/* Words 1 - 4   */
+rc=charout(out,'0000 0400'x)
+rc=charout(out, X2C(D2X(BperLineOut,8)))
+rc=charout(out, X2C(d2x(InitialLineOut,8)))
+rc=charout(out, X2C(d2x(LastlineOut,8)))
+
+/* Words 5 - 8   */
+rc=charout(out, X2C(d2x(InitialElementOut,8)))
+rc=charout(out, X2C(d2x(LastElementOut,8)))
+rc=charout(out, X2C(d2x(NChannelsOut,8)))
+rc=charout(out, X2C(D2X(4321,8)))
+
+/* Words 9 - 12  */
+rc=charout(out, left(YCDOut,4))
+rc=charout(out, X2C(d2x(YOFOut,8)))
+rc=charout(out, left(XCDOut,4))
+rc=charout(out, X2C(d2x(XOFOut,8)))
+
+/* Words 13 - 16 */
+rc=charout(out, reverse(f2c(HtOut,4)))
+rc=charout(out, reverse(f2c(WidOut,4)))
+rc=charout(out, reverse(f2c(tran1Out,4)))
+rc=charout(out, reverse(f2c(tran2Out,4)))
+
+/* Words 17 - 18 */
+rc=charout(out, reverse(f2c(tran3Out,4)))
+rc=charout(out, reverse(f2c(tran4Out,4)))
+
+
+/* Word 19       */
+SentinalOut=d2x(SentinalOut)
+Part2Out=x2b(d2x(DataTypeCodeOut,2))
+Part2Out=right(Part2Out,5)
+Part4Out=x2b(d2x(NBperElementOut,2))
+Word19_16_31Out=ChannelHeaderFlagOut||Part2Out||'00'||Part4Out
+Word19_16_31Out=b2x(Word19_16_31Out)
+
+Word19Out=SentinalOut||Word19_16_31Out
+
+rc=charout(out,x2c(Word19Out))
+
+/* Words 20 - 24 */
+rc=charout(out,Undefined1Out)
+rc=charout(out,Undefined2Out)
+rc=charout(out,EikonixOut)
+rc=charout(out,LABLStatusOut)
+rc=charout(out,CreatedByOut)
+
+/* Words 25 - 120 */
+/*  6 lines of comments */
+CommentsOut=left(CommentsOut,384)
+rc=charout(out,CommentsOut)
+
+/* 256 color table entries, Words 121 - 248  */
+
+do i = 0 to 255
+  ColorTableOut=x2c(0||d2x(BlueOut.i,1)||d2x(RedOut.i,1)||d2x(GreenOut.i,1))
+  rc=charout(out,ColorTableOut)
+  end i
+
+/* Words 249 - 256 */
+rc=charout(out,Undefined3Out)
+rc=charout(out,Undefined4Out)
+rc=charout(out,Undefined5Out)
+rc=charout(out,Undefined6Out)
+rc=charout(out,Undefined7Out)
+rc=charout(out,Undefined8Out)
+rc=charout(out,Undefined9Out)
+rc=charout(out,Undefined10Out)
+
+rc=lineout(out)
+
+parse var SubRoutineHistory . SubRoutineHistory
+
+return 1

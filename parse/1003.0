@@ -1,0 +1,4 @@
+/* Event Cancel CANCEL_PB, Clicked/selected */
+Arg window self
+
+CALL VpWindow window,'CLOSE'

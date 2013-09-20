@@ -1,0 +1,24 @@
+/* Select a quote at random. */
+procedure
+
+quote.1 ="Apathy, Apathy, Apathy - Is there no end to the apathy?  I don't care. (Comic strip BC.)"
+quote.2 ="Be sure brain is in gear before mouth is engaged."
+quote.3 ="Back to the subterranean sodium chloride production facility."
+quote.4 ="Sometimes I feel like an idiot studying hard to be a moron, but failing miserably due to stupidity."
+quote.5 ="One man's noise is another man's signal. (unknown)"
+quote.6 ="This unadulterated piece of miscellaneous machinery!"
+quote.7 ="This unadulterated pile miscellaneous muck!"
+quote.8 ="There is more than one way to separate the proverbial feline from its epidermal cover."
+quote.9 ="Brain Abort! Brain Abort!"
+quote.10='"Curioser and curiouser," cried Alice.  (Alice in Wonderland)'
+quote.11="No one has ever accused me of subtlety and been able to prove it!"
+quote.12="This sorry son of a sap-sucking Siberian sea biscuit."
+quote.13="Ooooohhhh muck!"
+quote.14="What is it about 'no' that you don't understand? (unknown)"
+quote.15="This is more fun and a frontal lobotomy with a chain saw."
+quote.16="If it ain't nailed down, they meant you to take it.  If someone accidentally left nails in it, that's why you brought the crowbar."
+quote.17="Facts are hard nobbly things, and they care little for our opinions or beliefs."
+quote.0=17
+
+rc=random(1,quote.0)
+return quote.rc

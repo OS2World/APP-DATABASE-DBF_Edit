@@ -1,0 +1,170 @@
+/* INISetup  - subroutine for .ini set up and configuration.                 */
+/* To use edit the variable KeysList, adding key names and default values.   */
+/* This routine will do the following:                                       */
+/*    see if the necessary ini exists                                        */
+/*    if not it will be created,                                             */
+/*    if it does exist it will be checked to make sure all the necessary     */
+/*       keys are present,                                                   */
+/*    missing keys will be created,                                          */
+/*    all of the keys are loaded into memory.                                */
+/*                                                                           */
+/* To add a key simply modify the variable KeyList and give default          */
+/* value for the new key.                                                    */
+/*    Format Usage:                                                          */
+/*    Numeric key values can not be quoted.                                  */
+/*    Blanks are not permitted in keys.                                      */
+/*    Keys and values are delimited by the string ';'                        */
+/*                                                                           */
+/* If INISetup detects a key which does not match the list in KeysList it    */
+/* will automatically backup the existing ini and create a new file with the */
+/* defaults.                                                                 */
+/*                                                                           */
+/* INISetup will load into memory all the values of all keys using variable  */
+/* names equal to the names of the keys.                                     */
+/*                                                                           */
+/* It is assumed the calling routine will have set the variables "MasterM"   */
+/* and "INIFile".  MasterM is the name of the program, such as "Import" and  */
+/* INIFile is the name of the ini file to be used.  I use two lines of code  */
+/* in the main routine of all my programs such as:                           */
+/*    MasterM='Import'                                                       */
+/*    INIFile=MasterM'.ini'                                                  */
+/* This way I can set the name of the program once and simply copy blocks of */
+/* code between programs and not worry about editing the sysini() calls.     */
+/*                                                                           */
+/* I use three calls to the REXXLIB library, doschmod(), dosdel() and        */
+/* doscopy().  They change the attributes, delete and copy a file. The       */
+/* functionality can be obtained by other mechanisms if you don't have       */
+/* REXXLIB.  REXXLIB is a product of Quercus, http://www.quercus-sys.com/    */
+/*                                                                           */
+/* This version also will use FastINI if it is available.  See               */
+/* (http://www.ozemail.com.au/~dbareis)                                      */
+/*                                                                           */
+/* Doug Rickman Jan 21, 2000; Feb. 14, 2000, May 26, 2000                    */
+
+rc=iniSetupDefaults()
+
+do i = 1 
+   parse var KeysList MasterKeysList.i MasterKeysValues.i ';' KeysList
+   MasterKeysList.i   = strip(MasterKeysList.i)
+   MasterKeysValues.i = strip(MasterKeysValues.i)
+   /* say right(i,3) MasterKeysList.i MasterKeysValues.i */
+   if KeysList='' then leave i
+   end i
+MasterKeysList.0=i
+
+/* does INI exist?  */
+INISearch = syssearchpath('..',INIFile)                    
+
+/* Load the ini using FastINI if available. */
+if FastINI = 'Available' then do
+   FastRc = FastIniStart(IniFile, "IniHandle")
+   if  FastRc = 'OK' then nop
+   else do
+      say 'FastINI failed to load the ini. Heck if I know the problem.'
+      say 'Doug will have to fix this one.  Of delete FastINI.dll from your'
+      say 'LIBPATH and reboot your system and try again.'
+      return 0
+      end
+   FastINI='YES'
+   end
+
+
+if INISearch = ' ' then do 
+   /* ini file does not exist here, make one  */
+   rc=CreateINI() 
+   rc=sysini(INIFile,MasterM,'ALL:','IniKeysList.')
+   rc=LoadINIValues()
+   if FastINI='YES' then call FastIniEnd  IniHandle
+   return 1
+   end
+
+
+/* But if INI does exist .... */
+
+/* First check to be sure ini contains values for all keys. */
+rc=sysini(INIFile,MasterM,'ALL:','IniKeysList.')
+select
+/* Does the number of variables in IniKeysList.0 = MasterKeysList.0? */
+   when IniKeysList.0 = MasterKeysList.0 then do
+      CheckSum=0
+      do i = 1 to IniKeysList.0
+         do j = 1 to MasterKeysList.0
+            if IniKeysList.i = MasterKeysList.j then do
+               /* say 'Found ' i IniKeysList.i */
+               CheckSum=CheckSum+1
+               leave j
+               end
+            end j
+         end i
+      if CheckSum<>MasterKeysList.0 then do
+         /* Something is wrong with the ini.  Backit up and create a new one. */
+         txt='Something is wrong with your existing INI file.  I will back it',
+             'up as 'INIFile'.backup and create a new one.'
+         response=VpMessageBox(window,'Problems, problems, problems!',txt)
+         rc=stream(INIFile,'c' 'close')
+         rc=dosdel(INIFile'.backup')
+         rc=doscopy(INIFile,INIFile'.backup')
+         rc=doschmod(INIFile'.backup','A','HSR')
+         rc=dosdel(INIFile)
+         rc=CreateINI()
+         rc=sysini(INIFile,MasterM,'ALL:','IniKeysList.')
+         rc=LoadINIValues()
+         end /* if CheckSum<>MasterKeysList.0 then ... */
+      else nop /* The correct number and the correct keys are present. Situation A-OK. */
+      end /* when IniKeysList.0 = MasterKeysList.0 then ... */
+
+   when IniKeysList.0 > MasterKeysList.0 then do 
+      /* Something is wrong with the ini.  Backit up and create a new one. */
+      txt='Something is wrong with your existing INI file.  I will back it',
+          'up as 'INIFile'.backup and create a new one.'
+      response=VpMessageBox(window,'Problems, problems, problems!',txt)
+      rc=stream(INIFile,'c' 'close')
+      rc=dosdel(INIFile'.backup')
+      rc=doscopy(INIFile,INIFile'.backup')
+      rc=dosdel(INIFile)
+      rc=CreateINI()
+      rc=sysini(INIFile,MasterM,'ALL:','IniKeysList.')
+      rc=LoadINIValues()
+      end
+         
+   when IniKeysList.0 < MasterKeysList.0 then do 
+      /* Missing one or more keys, find and add them. */
+      do j = 1 to MasterKeysList.0
+         Found='NO'
+         do i = 1 to IniKeysList.0
+            if IniKeysList.i = MasterKeysList.j then do
+               Found='YES'
+               leave i
+               end
+            end i
+         if Found='YES' then nop
+         else /* Create the key and give it a value. */
+            rc=sysini(INIFile,MasterM,MasterKeysList.j,MasterKeysValues.i)
+         end j
+      end /* when ... */
+      
+   otherwise say 'How did I get to here in IniSetup on such a beautiful day?  Doug goofed again.'
+   end /* select */
+
+rc=LoadINIValues()
+
+if FastINI='YES' then call FastIniEnd  IniHandle
+
+return 1
+
+
+LoadINIValues:
+/* Now place the ini values into memory. */
+do i = 1 to IniKeysList.0
+   rc=value(IniKeysList.i,sysini(INIFile,MasterM,IniKeysList.i))
+   end i
+in  = InputFile   /* Special case for my own needs, D. Rickman */
+out = OutputFile  /* Special case for my own needs, D. Rickman */
+return 1
+
+
+CreateINI:
+do i = 1 to MasterKeysList.0
+   rc=sysini(INIFile,MasterM,MasterKeysList.i,MasterKeysValues.i)
+   end i
+return 1

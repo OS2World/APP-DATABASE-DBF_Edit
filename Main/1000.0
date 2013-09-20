@@ -1,0 +1,97 @@
+/* Event OK NEW_OK, Clicked/selected */
+Arg window self
+
+SubRoutineHistory = 'OK_NEW' SubRoutineHistory
+
+CALL VpItem window,'NEW_OK','DISABLE'
+CALL VpItem window,'NEW_CANCEL','DISABLE'
+CALL VpItem window,'FIELDNAME_NEW','DISABLE'
+CALL VpItem window,'DEFINITION_NEW','DISABLE'
+
+CALL VpItem window,'FIELDNAME_NEW','HIDE'
+CALL VpItem window,'DEFINITION_NEW','DISABLE'
+CALL VpItem window,'NEW_OK','HIDE'
+CALL VpItem window,'NEW_CANCEL','HIDE'
+
+
+FieldName_New  = translate(VpGetItemValue(window,'FIELDNAME_NEW'))
+Definition_New = VpGetItemValue(window,'DEFINITION_NEW')
+
+CALL VpItem window,'FIELDNAME_NEW','BACKCOLOR','WHITE'
+CALL VpItem window,'DEFINITION_NEW','BACKCOLOR','WHITE'
+
+CALL VpSetItemValue window,'FIELDNAME_NEW',''
+CALL VpSetItemValue window,'DEFINITION_NEW',''
+
+/* Set read only on FIELDNAME_NEW Entry Field */
+rc=VpItem(window,'FIELDNAME_NEW','SETSTYLEBIT', 5, 1)
+rc=VpItem(window,'DEFINITION_NEW','SETSTYLEBIT', 5, 1)
+
+CALL VpItem window,'FIELDNAMES','ENABLE'
+CALL VpItem window,'DEFINITION','ENABLE'
+
+
+/* index is set in the menu items edit (fieldnames), edit (defintions) and insert new. */
+select
+   when Mode = 'Replace Definition' then do
+      Definition.index = Definition_new
+      ip1 = index +1
+      end
+
+   when Mode = 'Replace FieldName' then do
+      FieldName_New   = left(FieldName_New,10)
+      FieldName.index = FieldName_New
+      ip1 = index +1
+      end
+
+   when Mode = 'New' then do
+      /* Move all the items higher than index up 1. */
+      
+      if Order.0=255 then do
+         txt1 = 'You can not do this!'
+         txt2 = 'You can not have more than 128 fields in a .DBF file.'
+         response=VpMessageBox(window,txt1,txt2)
+         parse var SubRoutineHistory . SubRoutineHistory
+         return 0
+         end
+      do i = Order.0 to index+1 by -1
+         ip1 = i +1
+         FieldName.ip1  = FieldName.i
+         Definition.ip1 = Definition.i
+         Order.ip1      = Order.i         
+         end i
+
+      ip1 = index +1
+      FieldName.ip1       = FieldName_New
+      Definition.ip1 = Definition_new
+      Order.ip1      = 'New'
+      FieldName.0    = Order.0 + 1
+      Definition.0   = Order.0 + 1
+      Order.0        = Order.0 + 1
+      end
+      
+      
+   end /* select */
+   
+CALL VpDeleteItem window,'FIELDNAMES','ALL'
+CALL VpDeleteItem window,'DEFINITION','ALL'
+CALL VpDeleteItem window,'ORDER','ALL'
+
+index=VpAddItem(window, 'FIELDNAMES', 'LIST', 'FieldName.')
+index=VpAddItem(window, 'DEFINITION', 'LIST', 'Definition.')
+index=VpAddItem(window, 'ORDER', 'LIST', 'Order.')
+
+CALL VpSelect window,'FIELDNAMES',ip1,1
+CALL VpSelect window,'DEFINITION',ip1,1
+CALL VpSelect window,'ORDER',ip1,1
+
+CALL VpItem window,'FIELDNAMES','SENDMSG','0x0162',index,'0'
+CALL VpItem window,'DEFINITION','SENDMSG','0x0162',index,'0'
+CALL VpItem window,'ORDER','SENDMSG','0x0162',index,'0'
+
+Mode = ''
+
+parse var SubRoutineHistory . SubRoutineHistory
+
+return 1
+

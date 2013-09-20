@@ -1,0 +1,56 @@
+/* Read each line and parse into variables.     */
+procedure expose TempFieldName. TempDefinition. TempValueIn. window SubRoutineHistory
+
+SubRoutineHistory = 'DBASWriteTest' SubRoutineHistory
+
+dbfout      = arg(1)
+NRecordsOut = arg(2)
+
+/* Create the temporary output database file.  */
+DBFout.fieldcount = TempFieldName.0
+do i = 1 to  DBFout.fieldcount
+   FieldNameOut = strip(TempFieldName.i)
+   parse var TempDefinition.i FieldType FieldLength
+   FieldType   = left(strip(FieldType),1)
+   FieldLength = strip(FieldLength)
+   DBFout.fieldname.i = FieldNameOut
+   DBFout.FieldNameOut.type      = FieldType
+   DBFout.FieldNameOut.length    = FieldLength
+   end i
+
+rc=DBASStructureCheck()
+if rc \=1 then do 
+   txt1='The database can not be made this way.'
+   parse var rc . txt2
+   response=VpMessageBox(window,txt1,txt2)
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+
+rc1=rexxbase_createdbf('DBFout') 
+if rc1\='' then do
+   txt= 'Attempting to create test .dbf file: 'rc1
+   rc2=DBASRexxBaseError(txt)
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+
+/* Write the output records. */
+do i = 1 to NRecordsOut
+   do h = 1 to DBFout.fieldcount
+      FieldNameOut = strip(DBFout.fieldname.h)  
+      DBFout.FieldNameOut = TempValueIn.h
+      end h
+
+   rc1=rexxbase_writedbf('dbfout')
+   if rc1\='' then do
+      txt= 'Attempting to write test .dbf file: 'rc1
+      rc2=DBASRexxBaseError(txt)
+      parse var SubRoutineHistory . SubRoutineHistory
+      return 0
+      end
+   end i
+rc=rexxbase_closedbf('dbfout') 
+
+parse var SubRoutineHistory . SubRoutineHistory
+return 1

@@ -1,0 +1,14 @@
+/* Event Menu events, ~Run */
+Arg window self
+
+SubRoutineHistory = 'Input' SubRoutineHistory
+
+
+dbfin = VpGetItemValue(window,'INPUT')
+dbfout = VpGetItemValue(window,'OUTPUT')
+
+rc=dosdel(dbfout)
+
+rc=DBASWrite(dbfin,dbfout)
+
+parse var SubRoutineHistory . SubRoutineHistory

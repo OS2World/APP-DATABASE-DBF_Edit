@@ -1,0 +1,36 @@
+/* Menu events - Edit the Field Name */
+Arg window self
+
+index=VpGetIndex(window,'FIELDNAMES','SELECTED',0)
+if index=0  then return 0
+if datatype(Order.index,'W')\=1 then return 0
+
+
+CALL VpItem window,'FIELDNAME_NEW','ENABLE'
+CALL VpItem window,'NEW_OK','ENABLE'
+CALL VpItem window,'NEW_CANCEL','ENABLE'
+
+CALL VpItem window,'FIELDNAME_NEW','SHOW'
+CALL VpItem window,'NEW_OK','SHOW'
+CALL VpItem window,'NEW_CANCEL','SHOW'
+
+/* Set item background RGB color FIELDNAME_NEW Entry Field */
+CALL VpItem window,'FIELDNAME_NEW','BACKCOLORRGB','16777160'
+
+/* Set read only off FIELDNAME_NEW Entry Field */
+rc=VpItem(window,'FIELDNAME_NEW','SETSTYLEBIT', 5, 0)
+
+CALL VpSetItemValue window,'FIELDNAME_NEW',FieldName.index
+
+CALL VpItem window,'FIELDNAME_NEW','FOCUS'
+
+CALL VpItem window,'FIELDNAMES','DISABLE'
+
+/* Check the item  MENU_FIELDS_EDIT Menu Item */
+CALL VpSelect window,'MENU_FIELDS_MOVEUP',0
+CALL VpSelect window,'MENU_FIELDS_MOVEDOWN',0
+CALL VpSelect window,'MENU_FIELDS_COPY',0
+CALL VpSelect window,'MENU_FIELDS_EDIT',1
+CALL VpSelect window,'MENU_FIELDS_INSERT',0
+
+Mode = 'Replace FieldName'

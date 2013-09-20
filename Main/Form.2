@@ -1,0 +1,17 @@
+/* Event Form events, Closed */
+Arg window 
+
+
+xy=VpWindow(window,'GETSIZE')
+PARSE VAR xy MainWindowSizeX MainWindowSizeY
+
+xy=VpWindow(window,'GETPOS')
+PARSE VAR xy MainWindowPositionX MainWindowPositionY
+
+if MainWindowPositionX<1 | MainWindowPositionY<1 then nop
+else do 
+   rc=sysini(INIFile,MasterM,'MainWindowSizeX',MainWindowSizeX)
+   rc=sysini(INIFile,MasterM,'MainWindowSizeY',MainWindowSizeY)
+   rc=sysini(INIFile,MasterM,'MainWindowPositionX',MainWindowPositionX)
+   rc=sysini(INIFile,MasterM,'MainWindowPositionY',MainWindowPositionY)
+   end

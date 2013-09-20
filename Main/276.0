@@ -1,0 +1,19 @@
+/* Menu events - string */
+Arg window self
+
+
+index=VpGetIndex(window,'ORDER','SELECTED',0)
+index = strip(Order.Index)
+if datatype(index,'W')\=1 then do
+   Txt1 = 'The job is not going to get done this way.'
+   Txt2 = 'This field not in input database.'
+   response=VpMessageBox(window,Txt1,Txt2)
+   return 0
+   end
+
+RecordN = VpGetItemValue(window,'RECORD_NUMBER')
+
+
+/* Open the form G:\source\VisProSource\dbf_edit\parse */
+ParseWindowID=VpOpenForm(window, 257,'STRING' index RecordN)
+CALL VpItem window,'MENU_PARSE','DISABLE'

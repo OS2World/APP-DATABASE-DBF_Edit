@@ -1,0 +1,165 @@
+/* Event Form events, Opened */
+Arg window 
+
+/* check behavior with deleted record check box off and on with real data. */
+
+
+/* Load DLLs */
+if rxfuncquery('rexxlibregister') then do         /* this will start rexxlib */
+   call rxfuncadd 'rexxlibregister', 'rexxlib', 'rexxlibregister'  
+   call rexxlibregister
+   end
+if rxfuncquery('sysloadfuncs') then do           /* this will start rexxutil */
+   CALL RxFuncAdd 'SysLoadFuncs', 'RexxUtil', 'SysLoadFuncs' 
+   CALL SysLoadFuncs
+   end
+if rxfuncquery('rxuinit') then do                      /* this will start rxu */
+   call rxfuncadd 'rxuinit','rxu','rxuinit'           
+   call rxuinit
+   end
+
+FastINI = 'Not Available'
+rc=LibPathSearch('FastINI.DLL')
+if left(rc,1) = 1 then do
+   if rxfuncquery('FastIniStart') then do     /* This will load the FASTINI. */
+      call RxFuncAdd  'FastIniStart',   'FastIni',  'FastIniStart'
+      call RxFuncAdd  'FastIniEnd',     'FastIni',  'FastIniEnd'
+      FastINI = 'Available'
+      end
+   end
+
+RexxBase.Error = 'stem' /* sends rexxbase errors to the stem variable */
+if rxfuncquery('rexxbase_init') then do
+   rc=rxfuncadd(rexxbase_init,"REXXBASE","Rexxbase_Init")
+   rc=rexxbase_init()
+   end
+
+SubRoutineHistory = '' /* This goes before any possible subroutine calls. */
+
+SubRoutineHistory = 'Main_Form_Opened' SubRoutineHistory
+
+/* "Global Definitions" */
+ParentWindowID            = window
+ParseWindowID             = 0
+FIPSWindowID              = 0
+
+PID=ProcessNameN_ID_is('PID')
+
+if PID=0 then do
+   say 'Something is wrong with ProcessName_ID_is.  It returned a 0'
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+
+MasterM='DBF_Edit' /* A very important detail this! */
+INIFile=MasterM'.ini'
+
+
+/* Define the default directories */
+RexxBinDirectory= VALUE('ELASII',,'OS2ENVIRONMENT')||'\bin\REXX\'
+DocumentationDirectory= VALUE('ELASII',,'OS2ENVIRONMENT')||'\Documentation\'
+BinDirectory=VALUE('ELASII',,'OS2ENVIRONMENT')||'\bin\'
+TempDirectory= VALUE('TEMP',,'OS2ENVIRONMENT')
+if TempDirectory = '' then 
+   TempDirectory = VALUE('TMP',,'OS2ENVIRONMENT')
+if TempDirectory = '' then do
+   txt = 'Either the environment variable "TEMP" or "TMP" must be set in',
+         'your CONFIG.SYS.  There is no magic without at least one of them.'
+   say txt
+   CALL VpItem window,'MENU_MAGIC','DISABLE'
+   end
+
+call IniSetup
+
+/* Note, by putting these items after the INISetup it means runs started     */
+/* from the command line are also controlled by the values stored in the ini */
+/* unless a command line switch is coded.                                    */
+
+if READDATA_CB='1' then do
+   CALL VpSelect window,'READDATA_CB',1
+   CALL VpSetItemValue window,'READDATA_CB','Yes'
+   end   
+else do
+   CALL VpSelect window,'READDATA_CB',0
+   CALL VpSetItemValue window,'READDATA_CB','No'
+   end   
+
+if SKIPDELETED_CB='1' then do
+   CALL VpSelect window,'SKIPDELETED_CB',1
+   CALL VpSetItemValue window,'SKIPDELETED_CB','Yes'
+   REXXBASE.SKIPDELETED = 'ON'
+   end
+else do
+   CALL VpSelect window,'SKIPDELETED_CB',0
+   CALL VpSetItemValue window,'SKIPDELETED_CB','No'
+   REXXBASE.SKIPDELETED = 'OFF'
+   end
+
+REXXBASE.SHARE = 'READ' /* Other tasks can read the .dbf file. */
+REXXBASE.DBASEFILEFORMAT =  "dBase4" /* "dBase3" */
+
+Magic.0 = 0 /* This tracks the number of "Magic" operations to do. */
+
+CALL VpSetItemValue window,'OUTPUT',out
+
+CALL VpItem window,'FIELDNAME_NEW','BACKCOLOR','WHITE'
+CALL VpItem window,'DEFINITION_NEW','BACKCOLOR','WHITE'
+
+CALL VpItem window,'MESSAGE','HIDE'
+
+/* Now, see if there is input from the command line. */
+parse var topic infile format
+select 
+   when dosisfile(infile) & format \= '' then do
+      /* This is a command line driven execution. */
+      rc=CommandLineExecution(infile,format)
+      parse var SubRoutineHistory . SubRoutineHistory
+      call _VPAppExit /* This will force and exit without opening a panel.   */
+      end
+   
+   when infile\='' & format ='' then do
+      /* User supplied file name on command line. Open and position window.  */      
+      TempName = infile
+      call InputSetup1
+      end
+
+   
+   when infile='' & format ='' then do 
+      /* Open and position window. */      
+      end
+
+   otherwise do
+      title='So, I have to find all your mistakes?'
+      message='The file name you have specified is not a valid file.'
+      response=VpMessageBox(window,title,message)
+      end
+   end /* end select */
+
+
+xy=VpWindow(window,'GETSCREENSIZE')
+PARSE VAR xy x y
+if MainWindowPositionX>x |  MainWindowPositionX<1 |,
+   MainWindowPositionY>y | MainWindowPositionY<1     then do
+      /* The window is off the screen, recover the situation. */
+      MainWindowSizeX     = 414
+      MainWindowSizeY     = 520
+      MainWindowPositionX =  10
+      MainWindowPositionY =  10
+   end
+
+
+/*  Turn this on to help set the main panel to the correct size. */
+/*
+MainWindowSizeX     = 414
+MainWindowSizeY     = 520
+*/
+
+CALL VpWindow window,'SETPOS',  MainWindowPositionX, MainWindowPositionY, MainWindowSizeX, MainWindowSizeY
+CommandLineExecution='NO'
+      
+CALL VpSetItemValue window,'MESSAGE',quote()
+CALL VpItem window,'MESSAGE','SHOW'
+
+parse var SubRoutineHistory . SubRoutineHistory
+
+return 1

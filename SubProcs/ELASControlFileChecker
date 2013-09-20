@@ -1,0 +1,106 @@
+/* Check to see if the file exists.  If it exists does it have the correct   */
+/* specs: elements, lines, channels, datatype, bytes per element, writtable? */
+/* Returns:                                                                  */
+/*   1 - All is well.                                                        */
+/*  -2 - File does not exist.                                                */
+/*  -3 - File could not be made ready.                                       */
+/*  -4 - Is not an ELAS file.                                                */
+/*  -6 - The supplied file name is not syntactically valid.                  */
+/* -14 - File is not writable.                                               */
+/*                                                                           */
+/* A blank may be passed for any of the arguments.  FileChecker will not     */
+/* check those arguments.                                                    */
+/*                                                                           */
+/* If the argument "QuietError" is set to 'YES' then no error message is     */
+/* shown to the user, otherwise the user gets a message box specifying the   */
+/* nature of the problem found.                                              */
+/*                                                                           */
+/* NONE OF THE VARIABLES USED ARE EXPOSED TO THE CALLING ROUTINE.            */
+/*                                                                           */
+/* The calling code will have to check else where, if necessary, to confirm  */
+/* that user wishes to over write existing data.                             */
+/* Doug Rickman May 29, 1999, mod. Dec. 14, 1999, mod. Jan 21, 2000          */
+
+procedure expose (ControlFileExposeList) Subfile. GenericErrorQUIET SubRoutineHistory 
+
+FileName              =arg(1)
+QuietError            =arg(2)   /* either 'YES' or 'NO' or blank (which=NO). */
+WritePermissionNeeded =arg(3)   /* either 'YES' or 'NO' or blank (which=NO). */
+
+SubRoutineHistory = 'ELASControlFileChecker' SubRoutineHistory
+
+/* Is the name syntactically correct? */
+rc=validname(FileName)
+if rc=0 then do
+   if QuietError\='YES' then do
+      message='The file name 'FileName' is not a valid file name.'
+      response=VpMessageBox(window,'ELASControlFileChecker Oops!',message)
+      end
+   parse var SubRoutineHistory . SubRoutineHistory
+   return -6
+   end
+   
+/* Is it a real file */
+if dosisfile(FileName) \=1 then do
+   if QuietError\='YES' then do
+      message='The file name 'FileName' is not a valid file name.'
+      response=VpMessageBox(window,'ELASControlFileChecker Oops!',message)
+      end
+   parse var SubRoutineHistory . SubRoutineHistory
+   return -2
+   end
+   
+/* We now know the file exists. */
+
+call ReadELASControlFile FileName, , ,'YES'
+
+/* Is it an ELAS Control file? */
+select
+   when Result =  1 then ReturnValue=1 /* All is well, so far! */
+   when Result = -1 then do
+      if QuietError\='YES' then do
+         message=FileName 'could not be made ready.  Several '
+         message=message||"things may cause this.  Common reasons: the file doesn't exist or it is locked by another process."
+         response=VpMessageBox(window,'ELASControlFileChecker Oops!',message)
+         end
+      parse var SubRoutineHistory . SubRoutineHistory
+      return -3
+      end   
+   when Result = -2 then do
+      if QuietError\='YES' then do
+         message=FileName' is not an ELAS control file.'
+         response=VpMessageBox(window,'ELASControlFileChecker Oops!',message)
+         end
+      parse var SubRoutineHistory . SubRoutineHistory
+      return -4
+      end
+   otherwise do 
+      if QuietError\='YES' then do
+         message='Something is wrong.  ReadELASMain did not return a 1, indicating all is not well.'
+         response=VpMessageBox(window,'ELASControlFileChecker Oops!',message)
+         end
+      parse var SubRoutineHistory . SubRoutineHistory
+      return -4
+      end
+   end /* select */
+
+
+if WritePermissionNeeded    \= "YES" then nop
+else do
+   Attributes= dosdir(FileName,'A')
+   if pos('R',Attributes)>0 then do
+      returnvalue= -14
+      if QuietError\='YES' then do
+         message='It is not possible to write to this file.'
+         response=VpMessageBox(window,'ELASFileChecker Oops!',message)
+         end
+      end
+   end
+
+parse var SubRoutineHistory . SubRoutineHistory
+
+return returnvalue
+
+
+
+

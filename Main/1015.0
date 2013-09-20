@@ -1,0 +1,43 @@
+/* Event Cancel NEW_CANCEL, Clicked/selected */
+Arg window self
+
+CALL VpItem window,'NEW_OK','DISABLE'
+CALL VpItem window,'NEW_CANCEL','DISABLE'
+CALL VpItem window,'FIELDNAME_NEW','DISABLE'
+CALL VpItem window,'DEFINITION_NEW','DISABLE'
+
+CALL VpItem window,'FIELDNAME_NEW','HIDE'
+CALL VpItem window,'DEFINITION_NEW','HIDE'
+CALL VpItem window,'NEW_OK','HIDE'
+CALL VpItem window,'NEW_CANCEL','HIDE'
+
+CALL VpItem window,'FIELDNAME_NEW','BACKCOLOR','WHITE'
+CALL VpItem window,'DEFINITION_NEW','BACKCOLOR','WHITE'
+
+CALL VpSetItemValue window,'FIELDNAME_NEW',''
+CALL VpSetItemValue window,'DEFINITION_NEW',''
+
+/* Set read only on FIELDNAME_NEW Entry Field */
+rc=VpItem(window,'FIELDNAME_NEW','SETSTYLEBIT', 5, 1)
+rc=VpItem(window,'DEFINITION_NEW','SETSTYLEBIT', 5, 1)
+
+CALL VpItem window,'FIELDNAMES','ENABLE'
+CALL VpItem window,'DEFINITION','ENABLE'
+
+CALL VpDeleteItem window,'FIELDNAMES','ALL'
+CALL VpDeleteItem window,'DEFINITION','ALL'
+CALL VpDeleteItem window,'ORDER','ALL'
+
+i = index
+
+index=VpAddItem(window, 'FIELDNAMES', 'LIST', 'FieldName.')
+index=VpAddItem(window, 'DEFINITION', 'LIST', 'Definition.')
+index=VpAddItem(window, 'ORDER', 'LIST', 'Order.')
+
+CALL VpSelect window,'FIELDNAMES',i,1
+CALL VpSelect window,'DEFINITION',i,1
+CALL VpSelect window,'ORDER',i,1
+
+
+Mode = ''
+

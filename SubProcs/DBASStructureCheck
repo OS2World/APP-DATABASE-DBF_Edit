@@ -1,0 +1,116 @@
+/* For the DBAS file to be built check all the values for validity.          */
+procedure expose DBFout. window SubRoutineHistory
+
+SubRoutineHistory = 'DBASStructureCheck' SubRoutineHistory
+
+/* This routine assumes the field names, types and lengths have been declared. */
+
+if DBFout.fieldcount > 255 then do
+   parse var SubRoutineHistory . SubRoutineHistory
+   return -1 'Field Name 'i' greater than 10 characters.'
+   end
+
+
+do i = 1 to DBFout.fieldcount
+   
+   
+   FieldNameOut = strip(DBFout.fieldname.i)
+   FieldType    = DBFout.FieldNameOut.type 
+   FieldLength  = DBFout.FieldNameOut.length
+   if left(FieldNameOut,1)='_' & FieldType='C' then
+   /* This dodges an error in REXXBase.dll */
+      FieldLength = trunc(FieldLength)
+
+   
+   select 
+      when length(FieldNameOut)>10 then do 
+         parse var SubRoutineHistory . SubRoutineHistory
+         return -2 'Field Name 'i' greater than 10 characters.'
+         end
+
+      when datatype(translate(FieldNameOut,'x','_'),'A') \=1 then do  
+         parse var SubRoutineHistory . SubRoutineHistory
+         return -3 'Field Name 'i' contains invalid characters.'
+         end
+
+      when left(FieldNameOut,1)='_' then do  
+         parse var SubRoutineHistory . SubRoutineHistory
+         return -13 'Field Name 'i' starts with "_", which REXXBasean not handle.'
+         end
+
+      when translate(FieldNameOut)\=FieldNameOut then do
+         /* This is a limitation in REXXBase. */  
+         parse var SubRoutineHistory . SubRoutineHistory
+         return -14 'Field Name 'i' is not all upper case.'
+         end
+
+      when FieldType = 'C' then do 
+         if FieldLength > 0 & FieldLength < 255 /* 250 */ & datatype(FieldLength,'W') then nop
+         else do
+            parse var SubRoutineHistory . SubRoutineHistory
+            return -4 'Field length 'i' must be from 1 - 254.'
+            end
+         end 
+         
+      when FieldType = 'D' then do 
+         if FieldLength = 8 then nop
+         else do
+            parse var SubRoutineHistory . SubRoutineHistory
+            return -5 'Field length 'i' must be 8.'
+            end
+         end 
+
+      when FieldType = 'L' then do 
+         if FieldLength = 1 then nop
+         else do
+            parse var SubRoutineHistory . SubRoutineHistory
+            return -6 'Field length 'i' must be 1.'
+            end
+         end 
+      
+      when FieldType = 'M' then do 
+         if FieldLength = 10 then nop
+         else do
+            parse var SubRoutineHistory . SubRoutineHistory
+            return -7 'Field length 'i' must be 10.'
+            end
+         end 
+
+      when FieldType = 'N' then do 
+         if datatype(FieldLength,'N') then nop
+         else do
+            parse var SubRoutineHistory . SubRoutineHistory
+            return -8 'Field length 'i' must be a whole or decimal number (xx.yy) .'
+            end
+         parse var FieldLength v1 '.' v2 .
+         if v1>0 & v1<20 then nop
+         else do
+            parse var SubRoutineHistory . SubRoutineHistory
+            return -9 'Value before decimal point in length of 'i' must be from 1 - 19.'
+            end
+         if datatype(FieldLength,'W') =1 then nop
+         else do 
+            if v2>-1 & v2<10 then nop
+            else do
+               parse var SubRoutineHistory . SubRoutineHistory
+               return -10 'Value after decimal point in length of 'i' must be from 0 - 9.'
+               end
+            if v2<v1 then nop
+            else do
+               parse var SubRoutineHistory . SubRoutineHistory
+               return -11 'Value after decimal point in length of 'i' must be less than value before decimal point.'
+               end
+            end /* if datatype ... else do ... */
+         end 
+      
+      otherwise do
+         parse var SubRoutineHistory . SubRoutineHistory
+         return -12 'An invalid type was specified for field 'i
+         end
+      
+      end /* end select */   
+   end i
+
+parse var SubRoutineHistory . SubRoutineHistory
+
+return 1

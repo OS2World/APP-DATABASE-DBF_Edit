@@ -1,0 +1,149 @@
+procedure expose GenericErrorQUIET SubRoutineHistory 
+
+in           = arg(1)
+ForcedDelete = arg(2)
+
+SubRoutineHistory = 'WriteHeader' SubRoutineHistory
+
+signal on syntax name GenericError
+
+parse value parsefn(in) with drive path filename extension
+
+PRNout=drive':'path||filename'.'extension'.ELASHeader.TXT'
+
+if ForcedDelete = 'YES' then 
+   rc=dosdel(PRNout)
+else do
+   if dosisfile(PRNout) then do
+      Message='The print file already exists.  Do you wish to erase the existing data.'
+      response=VpMessageBox(window,'Warning',message,'YESNOCNCL')
+      if response='CANCEL' then do
+         parse var SubRoutineHistory . SubRoutineHistory
+         return 0
+         end
+      if response='YES' then do
+         rc=dosdel(PRNout)
+         if rc<> 1 then do
+            response=VpMessageBox(window,'Problem','The file could not be deleted.')
+            parse var SubRoutineHistory . SubRoutineHistory
+            return 0
+            end
+         end /* if response = yes ... */
+      end /* if dosisfile .... */
+   end 
+   
+IF LENGTH(PRNout) < 1 THEN do
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+
+rc=readELASMain(in)
+
+rc=lineout(PRNout,'Information for ELAS file:'Filename'.'extension)
+
+rc=lineout(PRNout,'General Information:')
+rc=lineout(PRNout,'ELAS files have a 1024 byte header and are band interleaved by line.')
+rc=lineout(PRNout,'There are no channel headers.')
+
+rc=lineout(PRNout,' ')
+rc=lineout(PRNout,'InitialLine        =' InitialLine)
+rc=lineout(PRNout,'LastLine           =' LastLine)
+rc=lineout(PRNout,'InitialElement     =' InitialElement)
+rc=lineout(PRNout,'LastElement        =' LastElement)
+rc=lineout(PRNout,' ')
+
+rc=lineout(PRNout,'N Lines            =' NLines)
+rc=lineout(PRNout,'N Elements         =' NElements)
+rc=lineout(PRNout,' ')
+
+rc=lineout(PRNout,'N Channels         =' NChannels)
+rc=lineout(PRNout,' ')
+
+rc=lineout(PRNout,'Spatial Geometry:')
+rc=lineout(PRNout,'Pixel Height             =' HT)
+rc=lineout(PRNout,'Pixel Width              =' Wid)
+rc=lineout(PRNout,'Transform Matrix         =' Tran1 Tran2 Tran3 Tran4)
+rc=lineout(PRNout,'X coord of (0,0)         =' XOF)
+rc=lineout(PRNout,'Y coord of (0,0)         =' YOF)
+
+/* Safety Checks. */
+
+select
+   when datatype(InitialElement,'n') \= 1 then rc=lineout(PRNout,'Problem with InitialElement')
+   when datatype(InitialLine,'n') \= 1 then rc=lineout(PRNout,'Problem with InitialLine')
+   when datatype(LastElement,'n') \= 1 then rc=lineout(PRNout,'Problem with LastElement')
+   when datatype(LastLine,'n') \= 1 then rc=lineout(PRNout,'Problem with LastLine')
+   when datatype(tran1,'n') \= 1 then rc=lineout(PRNout,'Problem with tran1')
+   when datatype(tran2,'n') \= 1 then rc=lineout(PRNout,'Problem with tran2')
+   when datatype(tran3,'n') \= 1 then rc=lineout(PRNout,'Problem with tran3')
+   when datatype(tran4,'n') \= 1 then rc=lineout(PRNout,'Problem with tran4')
+   when datatype(XOF,'n') \= 1 then rc=lineout(PRNout,'Problem with xof')
+   when datatype(YOF,'n') \= 1 then rc=lineout(PRNout,'Problem with yof')
+   when datatype(Wid,'n') \= 1 then rc=lineout(PRNout,'Problem with wid')
+   when datatype(Ht,'n') \= 1 then rc=lineout(PRNout,'Problem with ht')
+
+   otherwise do
+      X=InitialElement*tran1+InitialLine*tran2
+      Y=InitialElement*tran3+InitialLine*tran4
+
+      Easting =XOF +(X *Wid )
+      Northing=YOF +(Y *Ht )
+      rc=lineout(PRNout,'Center UL Pixel, X coord =' Easting)
+      rc=lineout(PRNout,'Center UL Pixel, Y coord =' Northing)
+      end
+   end /* select */
+   
+rc=lineout(PRNout,' ')
+rc=lineout(PRNout,'Floating point data are stored in IEEE-754 standard format.')
+rc=lineout(PRNout,'Note, byte order is standard for an SGI, but is reversed ')
+rc=lineout(PRNout,'compared to normal IBM-PC usage.')
+
+select
+   when DataTypeCode=0  then
+      DataType='MIXED OR UNSPECIFIED DATA TYPE'
+   when DataTypeCode=1  then
+      DataType='UNSIGNED INTEGER'
+   when DataTypeCode=16 then
+      DataType='SINGLE PRECISION REAL'
+   when DataTypeCode=17 then
+      DataType='DOUBLE PRECISION REAL'
+   when DataTypeCode=18 then
+      DataType='SINGLE PRECISION COMPLEX'
+   when DataTypeCode=19 then
+      DataType='DOUBLE PRECISION COMPLEX'
+   when DataTypeCode=31 then
+      DataType='ASCII CHARACTERS'
+   otherwise do
+      say 'SOMETHING IS WRONG WITH THE DATA TYPE CODE!!!'
+      rc=lineout(PRNout,'Something is wrong with data, the data type code is bad!')
+      rc=lineout(PRNout,'Writing was stopped early.')      
+      rc=lineout(PRNout)
+      parse var SubRoutineHistory . SubRoutineHistory
+      return 0
+      end
+   end
+rc=lineout(PRNout,'Data type       =' DataType)
+rc=lineout(PRNout,'BytesPerElement =' NBperElement)
+
+rc=lineout(PRNout,' ')
+Pad=BPerLine-NElements*NBperElement
+rc=lineout(PRNout,'Lines are padded to sector boundaries.')
+rc=lineout(PRNout,'Total bytes stored per line =' BperLine)
+rc=lineout(PRNout,'creating 'Pad' bytes of padding per line.')
+
+rc=lineout(PRNout,' ')
+rc=lineout(PRNout,'Comment Block follows, bracketed by "|":')
+rc=lineout(PRNout,"|"Comments"|")
+
+rc=lineout(PRNout,' ')
+rc=lineout(PRNout,'Color table BGR, Possible value range 0-15')
+rc=lineout(PRNout,' ')
+do i = 0 to 255
+   rc=lineout(PRNout,right(Blue.i,2)',' right(Green.i,2)',' right(Red.i,2))
+   end i
+
+rc=lineout(PRNout)
+
+parse var SubRoutineHistory . SubRoutineHistory
+
+return 1

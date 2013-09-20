@@ -1,0 +1,527 @@
+/* This routine reads an ELAS control file.                                  */
+/* Variables are returned in the compound variable Subfile._----             */
+/* Returns:                                                                  */
+/*     1 - All is well.                                                      */
+/*    -1 - File could not be made ready.                                     */
+/*    -2 - This is not an ELAS control file.                                 */
+/*    -3 - The requested subfile is not present.                             */
+/*    -4 - The requested subfile type is not supported.                      */
+/*    -5 - The subfile is not the requested type.                            */
+/*    -6 - The subfile has a name that is normally reserved.                 */
+/*                                                                           */
+/* Specific variables for each subfile type may be exposed using the         */
+/* variable "ExposeList".  No current routine needs this.                    */
+/*                                                                           */
+/* The control file is stored in 240 Byte records.  Offsets given within the */
+/* control file are in records. Word 4 contains the number of subfiles.      */
+/* ReadELASControlFile returns the offset to the start of the next empty     */
+/* record in the control file in Subfile._Offset.n, where n is Subfile.0+1.  */
+/*                                                                           */
+/* Variables currently available in Subfile._----:                           */
+/*    1FMG       - Subfile.1FMG.j, where j=1 - 20.  Usage and file names.    */
+/*    Colortable - Subfile._Blue|_Red|_Green.i, where i is 0 - 255.          */
+/*    Functions  - Subfile._Function.j.i, where j is function # and          */
+/*       i is  0 - 255.                                                      */ 
+/*    Tables     - Subfile._Table.j.i, where j is table # and i is  0 - 255. */ 
+/*       Comments for table are in Subfile._TableComment                     */
+/* Functions, tables, and color tables are returned in in variables numbered */
+/* 0 - 255.  The  "Subfile._variable.0" values DO NOT contain the number of  */
+/* items in the array.                                                       */
+/*                                                                           */
+/* Doug Rickman  Jan 21, 2000, mod. Apr 19,2000                              */
+
+procedure expose (ControlFileExposeList) Subfile. GenericErrorQUIET SubRoutineHistory 
+
+input        = arg(1) /* Name of control file to examine. */
+Subfile2Read = arg(2) /* The name of the subfile to read. */
+SubfileType  = arg(3) /* The format to be used in reading the subfile. */
+Quiet        = arg(4) /* YES or NO or anything else.      */
+
+/* Add the record of this subroutine */
+SubRoutineHistory = 'ReadELASControlFile' SubRoutineHistory
+
+/* Give some common subfile names. */
+SystemSubfile = '1COM',
+                '2LBF',
+                '1DFA',
+                '2PDN',
+                '2WIN',
+                'DSPR',
+                'HDIO'
+
+do i = 1
+   parse var SystemSubfile SystemSubfile.i SystemSubfile
+   if SystemSubfile = '' then leave i
+   end i
+SystemSubfile.0=i-1
+
+KnownSubfiles='INFO',
+              'CV8 ',
+              'TBSF'
+do i = 1
+   parse var KnownSubfile KnownSubfile.i KnownSubfile
+   if KnownSubfile = '' then leave i
+   end i
+KnownSubfile.0=i-1
+
+rc=ReadControlFile()
+
+select
+   when rc =  1 then nop
+   when rc = -1 then do
+      if Quiet='YES' then do
+         parse var SubRoutineHistory . SubRoutineHistory
+         return -1
+         end
+      else do
+         txt ='Control File could not be made ready.'
+         response=VpMessageBox(window,'Mess up alert!',txt)
+         parse var SubRoutineHistory . SubRoutineHistory
+         return -1
+         end
+      end
+   when rc = -2 then do
+      if Quiet='YES' then return -2
+      else do
+         txt =' This is not an ELAS control file.'
+         response=VpMessageBox(window,'Mess up alert!',txt)
+         parse var SubRoutineHistory . SubRoutineHistory
+         return -2
+         end
+      end
+   otherwise say "Here is another of Doug's screw ups!"
+   end /* select */
+
+if Subfile2Read \= '' & SubfileType \= '' then rc=BeginSubfileRead()
+
+select
+   when rc =  1 then nop
+   when rc = -3 then do
+      if Quiet='YES' then return -3
+      else do
+         txt =' The requested subfile is not present.'              
+         response=VpMessageBox(window,'Mess up alert!',txt)
+         parse var SubRoutineHistory . SubRoutineHistory
+         return -3
+         end
+      end
+   when rc = -4 then do
+      if Quiet='YES' then return -4
+      else do
+         txt =' The requested subfile type is not supported.'
+         response=VpMessageBox(window,'Mess up alert!',txt)
+         parse var SubRoutineHistory . SubRoutineHistory
+         return -4
+         end
+      end
+   when rc = -5 then do
+      if Quiet='YES' then return -5
+      else do
+         txt =' The subfile is not the requested type.'
+         response=VpMessageBox(window,'Mess up alert!',txt)
+         parse var SubRoutineHistory . SubRoutineHistory
+         return -5
+         end
+      end
+   when rc = -6 then do
+      if Quiet='YES' then return -6
+      else do
+         txt =' The subfile has a name that is normally reserved.'
+         response=VpMessageBox(window,'Mess up alert!',txt)
+         parse var SubRoutineHistory . SubRoutineHistory
+         return -6
+         end
+      end
+   otherwise say 'I messed up again'
+   end /* select */
+
+return 1
+
+/*    -------------------------------------------------------------------    */
+/* Check to be sure the subfile is present then call the correct subroutine  */
+/* and read the subfile.                                                     */
+BeginSubfileRead:
+
+SubRoutineHistory = 'BeginSubfileRead' SubRoutineHistory
+
+/* Check to be sure subfile 2 read is present. */
+do i = 1 to Subfile.0
+   if Subfile2Read=Subfile.Name.i then leave i
+   end i
+if i > Subfile.0 then return -3      /* Requested subfile does not exist. */
+
+ii=i+1
+
+select 
+   when Subfiletype = '1FMG' then
+      rc=ReadSubfile1FMG(Subfile.Name.i,Subfile._Offset.i,Subfile._Offset.ii)
+
+   when Subfiletype = 'FUNCTION' then
+      rc=ReadSubfileFunction(Subfile.Name.i,Subfile._Offset.i,Subfile._Offset.ii)
+
+    when Subfiletype = 'TABLE' then
+      rc=ReadSubfileTable(Subfile.Name.i,Subfile._Offset.i,Subfile._Offset.ii)
+
+   when Subfiletype = 'COLORTABLE' then 
+      rc=ReadSubfileColorTable(Subfile.Name.i,Subfile._Offset.i,Subfile._Offset.ii)
+
+   when Subfiletype = 'CV8' then
+      rc=ReadSubfileCV8(Subfile.Name.i,Subfile._Offset.i,Subfile._Offset.ii)
+        
+   otherwise return -4 /* The requested subfile type is not supported.    */
+   end /* end select */
+
+select 
+   when rc =  1 then nop
+   when rc = -1 then return -5 /* Subfile is not the requested type.*/
+   when rc = -2 then return -6 /* Subfile name is a reserved   type.*/
+   otherwise say 'Doug has made another mistake. '
+   end /* end select */
+
+parse var SubRoutineHistory . SubRoutineHistory
+   
+return 1
+
+/*    -------------------------------------------------------------------    */
+
+/* ReadControlFile actually reads the contents of the control file.          */
+ReadControlFile:
+procedure expose input data Subfile.
+
+SubRoutineHistory = 'ReadControlFile' SubRoutineHistory
+
+rc=stream(input,'c','open read')
+if rc<>'READY:' then do
+   parse var SubRoutineHistory . SubRoutineHistory
+   return -1 /* 'File could not be made ready. */
+   end
+
+length = dosfsize(input)
+data=charin(input,,length)
+rc=stream(input,'c','close')
+
+/* Get the flag value. */
+parse var data . 1 FlagValue 5 .
+
+FlagValue=c2x(reverse(FlagValue))
+/* '00000913' is the hex equivalent of 2323, the header flag value.   */
+if FlagValue \= '00000913'  then do /* Not a control file. */
+      parse var SubRoutineHistory . SubRoutineHistory
+      return -2 
+      end 
+
+/* Get the number of subfiles, this is in word 4. */
+parse var data . 13 NSubfiles 17 .
+Subfile.0=x2d(c2x(reverse(NSubfiles)))
+
+/* Get the names and offsets for all subfiles. */
+End2=17
+do i = 1 to Subfile.0 + 1
+   Start = End2
+   End1  = Start+4
+   End2  = End1 +4
+   parse var data . =(Start) Subfile.Name.i =(End1) .
+   parse var data . =(End1)  Subfile._Offset.i =(End2) .
+   Subfile._Offset.i  = x2d(c2x(reverse(Subfile._Offset.i)))
+   /* The next line will show all subfile names and their record numbers.    */
+   /* say Subfile.Name.i Subfile._Offset.i */
+end /* end do */
+
+parse var SubRoutineHistory . SubRoutineHistory
+
+return 1
+
+/*    -------------------------------------------------------------------    */
+
+ReadSubfile1FMG:
+/* Usages and file names are returned for all 20 possible slots.             */
+/* Values are returned in Subfile.1FMG.j, j=1 to 20                          */
+procedure expose (ExposeList) data Subfile. SystemSubfile. KnownSubfile.
+
+SubRoutineHistory = 'ReadSubfile1FMG' SubRoutineHistory
+
+/* Get the data. */
+Offset=  (arg(2) * 240) +1 /* First byte of table.         */
+End   =  (arg(3) * 240) +1 /* First byte of next table.    */
+
+parse var data . =(Offset) FMGData =(End) .
+
+do j =1 to 20
+   parse var FMGData LU.j 5 Usage.j 9 BytesPerSector.j 13 FMGData
+   v = x2d(c2x(reverse(LU.j)),4)
+   select
+      when datatype(v,'n')\=1 then do /* This should never happen. */
+         parse var SubRoutineHistory . SubRoutineHistory
+         return -4
+         end
+      when v < 0 then Usage.j = '----' /* Slot not used. */
+      when v = 0 then Usage.j = '----' /* Slot used, no usage. */
+      when v > 0 then nop
+         /* say right(j,2) x2d(c2x(reverse(LU.j)),4) Usage.j x2d(c2x(reverse(BytesPerSector.j)),4) */
+      otherwise say 'NO way can I make a mistrake.'
+      end /* select */
+      Subfile.1FMG.j = Usage.j
+   end j
+
+do j =1 to 20
+   parse var FMGData FileName.j 81 . 241 FMGData
+   if verify(c2x(FileName.j),'F') = 0 then FileName.j=''
+   /* else say right(j,2) FileName.j */
+   Subfile.1FMG.j = Subfile.1FMG.j FileName.j
+   end j
+
+parse var SubRoutineHistory . SubRoutineHistory
+
+return 1
+
+
+
+/*    -------------------------------------------------------------------    */
+
+ReadSubfileFunction:
+/* Function values are returned in Subfile._Function.j.i. j=function number. */
+/* i=index into array, 0 - 255.                                              */
+procedure expose (ExposeList) data Subfile. SystemSubfile. KnownSubfile.
+
+SubRoutineHistory = 'ReadSubfileFunction' SubRoutineHistory
+
+/* Is the name a reserved name? */
+Name=arg(1)
+do i = 1 to SystemSubfile.0
+   if SystemSubfile.i = Name then do  /* This is a reserved name. */
+      parse var SubRoutineHistory . SubRoutineHistory
+      return -2
+      end
+   end i
+do i = 1 to KnownSubfile.0
+   if KnownSubfile.i = Name then do  /* This is a reserved name. */
+      parse var SubRoutineHistory . SubRoutineHistory
+      return -2
+      end
+   end i
+
+/* Get the data. */
+Offset= (arg(2) * 240) +1 /* First byte of function.      */
+End   = (arg(3) * 240) +1 /* First byte of next function. */
+
+parse var data . =(Offset) FunctionData =(End) .
+
+/* Now make simple check to be sure it is a function. */
+if arg(3)-arg(2) = 1 then do   /* This cannot be a function subfile.    */
+   parse var SubRoutineHistory . SubRoutineHistory
+   return -1
+   end
+
+/* Number of functions present... */
+NRecords=arg(3)-arg(2) -1
+NFunctions=(NRecords*240)%512
+
+
+/* OK, now read the function(s). */
+do j = 1 to NFunctions
+   do i = 0 to 255
+      parse var FunctionData v 2 . 3 FunctionData
+      Subfile._Function.j.i = x2d(c2x(v))
+      end i
+   end j
+
+Subfile._Function.0 = NFunctions
+
+parse var SubRoutineHistory . SubRoutineHistory
+
+return 1
+
+/*    -------------------------------------------------------------------    */
+
+ReadSubfileColorTable:
+/* Color table values are returned in Subfile."color".i                      */
+/* "color" = "_Blue"|"_Red"|"_Green".  Note the "color" is case sensitive!   */
+/* i=index into array, 0 - 255.                                              */
+procedure expose (ExposeList) data Subfile. SystemSubfile. KnownSubfile.
+
+SubRoutineHistory = 'ReadSubfileColorTable' SubRoutineHistory
+
+/* Is the name a reserved name? */
+Name=arg(1)
+do i = 1 to SystemSubfile.0
+   if SystemSubfile.i = Name then do  /* This is a reserved name. */
+      parse var SubRoutineHistory . SubRoutineHistory
+      return -2
+      end
+   end i
+do i = 1 to KnownSubfile.0
+   if KnownSubfile.i = Name then do  /* This is a reserved name. */
+      parse var SubRoutineHistory . SubRoutineHistory
+      return -2
+      end
+   end i
+
+/* Get the data. */
+Offset= (arg(2) * 240) +1 /* First byte of function.      */
+End   = (arg(3) * 240) +1 /* First byte of next subfile.  */
+
+parse var data . =(Offset) ColorTable =(End) .
+
+/* Now check to be sure it is a color table. */
+if arg(3)-arg(2) = 1 then do /* This cannot be a color table subfile. */
+   parse var SubRoutineHistory . SubRoutineHistory
+   return -1 
+   end 
+
+/* OK, now read the color table. */
+do i = 0 to 255
+   parse var ColorTable v 3 ColorTable
+   v=c2x(v)
+   v=x2b(v)
+   Subfile._Blue.i  = x2d(b2x(substr(v,13,4)))
+   Subfile._Red.i   = x2d(b2x(substr(v,1,4)))
+   Subfile._Green.i = x2d(b2x(substr(v,5,4)))
+   end i
+
+parse var SubRoutineHistory . SubRoutineHistory
+return 1
+
+/*    -------------------------------------------------------------------    */
+
+ReadSubfileTable:
+/* Table values are returned in Subfile._Table.j.i.                           */
+/* j=function number.  i=index into array, 0 - 255 */
+procedure expose (ExposeList) data Subfile. SystemSubfile. KnownSubfile.
+
+SubRoutineHistory = 'ReadSubfileTable' SubRoutineHistory
+
+/* Is the name a reserved name? */
+Name=arg(1)
+do i = 1 to SystemSubfile.0
+   if SystemSubfile.i = Name then do  /* This is a reserved name. */
+      parse var SubRoutineHistory . SubRoutineHistory
+      return -2
+      end
+   end i
+do i = 1 to KnownSubfile.0
+   if KnownSubfile.i = Name then do  /* This is a reserved name. */
+      parse var SubRoutineHistory . SubRoutineHistory
+      return -2
+      end
+   end i
+
+/* Get the data. */
+Offset=  (arg(2)    * 240) +1 /* First byte of table.         */
+End1  = ((arg(3)-1) * 240) +1 /* First byte of comments.      */
+End2  =  (arg(3)    * 240) +1 /* First byte of next table.    */
+parse var data . =(Offset) TableData =(End1) .
+parse var data . =(End1) Subfile._TableComment =(End2) .
+
+/* Now check to be sure it is a table. */
+if arg(3)-arg(2) < 6 then do /* This cannot be a color table subfile. */
+   parse var SubRoutineHistory . SubRoutineHistory   
+   return -1
+   end 
+
+/* Number of tables present... */
+NRecords=arg(3)-arg(2) -1
+NTables=(NRecords*240)%1024
+
+do j =1 to NTables
+   do i = 0 to 255
+      parse var TableData v 5 TableData
+      Subfile._Table.j.i  = c2f(v)
+      end i
+   end j
+
+Subfile._Table.0 = NTables
+
+parse var SubRoutineHistory . SubRoutineHistory
+
+return 1
+
+/*    -------------------------------------------------------------------    */
+
+ReadSubfileCV8:
+/* CV8 values are returned in Subfile._CV8.j                           */
+/* j=entry number.  */
+procedure expose (ExposeList) data Subfile. SystemSubfile. KnownSubfile.
+
+SubRoutineHistory = 'ReadSubfileTable' SubRoutineHistory
+
+Name=arg(1)
+
+/* Get the data. */
+Offset= (arg(2) * 240) +1 /* First byte of subfile.       */
+End   = (arg(3) * 240) +1 /* First byte of next subfile.  */
+parse var data . =(Offset) CV8Data =(End) .
+
+/* Now check to be sure it is a table. */
+NEntries = length(CV8Data)/240
+if datatype(NEntries,'W') then nop
+else do /* This cannot be a CV8 subfile. */
+   parse var SubRoutineHistory . SubRoutineHistory
+   return -1
+   end
+
+do i = 1 to NEntries
+   parse var CV8Data CV8Entry 241 CV8Data
+   parse var CV8Entry Module 9 Date 17 Time 25 . 45 Channel 49 Algorithm 53 NCoefficients 57 v 121 FileName 185 .
+
+   if c2x(module) = 'FFFFFFFFFFFFFFFF' then do
+      i = i-1
+      leave i
+      end
+
+   NCoefficients = c2d(reverse(NCoefficients))
+   Coefficients = ''
+   do j = 1 to NCoefficients
+      parse var v Coefficient.j 9 v
+      Coefficient.j = format(c2f(Coefficient.j),5,5,,5)
+      Coefficients = Coefficients right(Coefficient.j,10)
+      end j
+
+   Module = strip(Module,'T','00'x)
+   Channel       = c2d(reverse(Channel))
+   Algorithm     = c2x(reverse(Algorithm))
+   if Algorithm = '00000000' then Algorithm = 'Line  '
+   FileName      = strip(FileName)
+   
+   Subfile._CV8.i = Module Date Time Channel Algorithm right(NCoefficients,4) Coefficients FileName
+   if CV8Data = ''  then leave i
+   end i
+
+Subfile._CV8.0 = i
+
+parse var SubRoutineHistory . SubRoutineHistory
+
+return 1
+
+/*    -------------------------------------------------------------------    */
+
+
+49 4E 46 4F  00 00 00 00  30 33 2F 31  30 2F 30 30  INFOתתתת03/10/00
+31 30 3A 31  37 3A 33 33  00 00 00 00  00 00 00 00  10:17:33תתתתתתתת
+00 00 00 00  00 00 00 00  00 00 00 00  06 00 00 00  תתתתתתתתתתתתתתתת
+00 00 00 00  02 00 00 00  00 00 00 00  00 00 00 00  תתתתתתתתתתתתתתתת
+F6 7A 66 B8  70 8F 04 3F  00 00 00 00  00 00 00 00  תzfתpתת?תתתתתתתת
+00 00 00 00  00 00 00 00  00 00 00 00  00 00 00 00  תתתתתתתתתתתתתתתת
+00 00 00 00  00 00 00 00  00 00 00 00  00 00 00 00  תתתתתתתתתתתתתתתת
+00 00 00 00  00 00 00 00  58 2E 54 52  44 20 20 20  תתתתתתתתX.TRD
+20 20 20 20  20 20 20 20  20 20 20 20  20 20 20 20
+20 20 20 20  20 20 20 20  20 20 20 20  20 20 20 20
+20 20 20 20  20 20 20 20  20 20 20 20  20 20 20 20
+20 20 20 20  20 20 20 20  00 00 00 00  00 00 00 00          תתתתתתתת
+00 00 00 00  00 00 00 00  00 00 00 00  00 00 00 00  תתתתתתתתתתתתתתתת
+00 00 00 00  00 00 00 00  00 00 00 00  00 00 00 00  תתתתתתתתתתתתתתתת
+00 00 00 00  00 00 00 00  00 00 00 00  00 00 00 00  תתתתתתתתתתתתתתתת
+
+C                NUMBER  DATA
+C  RECORD  WORD  WORDS   TYPE               DESCRIPTION
+C  ______ ______ ______ ______  _____________________________________
+C  1 TO N   1      2      A*4   NAME OF MODULE WHICH REQUESTED CHANGE
+C                               OR UPDATE.
+C           3      2      A*4   DATE OF REQUEST IN FORM MM/DD/YY
+C           5      2      A*4   TIME OF REQUEST IN FORM HH:MM:SS
+C           7      5      A*4   NAME OF DATA FILE
+C          12      1      I*4   CHANNEL NUMBER IN RELATION TO DATA FILE
+C          13      1      I*4   ALGORITHIM CODE
+C          14      1      I*4   NUMBER OF VALUES FOR ALGORITHIM
+C         15-30   16     FP*8   ALGORITHIM VALUES
+C         31-60   30      -     SAME AS WORDS 1-30 FOR THE NEXT FILE/
+C                               CHANNEL COMBINATION.

@@ -1,0 +1,26 @@
+/* Event Form events, Opened */
+Arg window 
+
+/* Give item focus FIELDNAME1 Entry Field */
+CALL VpItem window,'CANCEL_PB','FOCUS'
+
+parse var topic topic index RecordN
+
+/* Set item value Parsing: 1007 Text */
+CALL VpSetItemValue window,1007,'Parsing data in the field 'FieldName.index
+
+if topic = 'STRING' then do
+   ParseKey=sysini(INIFile,MasterM,'ParseKeyString',ParseKey)
+   CALL VpSetItemValue window,'PARSE_KEY',ParseKey
+   txt='Input a string to use in parsing.'
+   end
+   
+if topic = 'POSITION' then do
+   ParseKey=sysini(INIFile,MasterM,'ParseKeyNumber',ParseKey)
+   CALL VpSetItemValue window,'PARSE_KEY',ParseKey
+   txt='Input a single, whole number.'
+   end
+
+CALL VpSetItemValue window,'DIRECTIONS_TXT',txt
+
+

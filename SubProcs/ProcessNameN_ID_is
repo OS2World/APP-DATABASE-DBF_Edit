@@ -1,0 +1,47 @@
+/* Return the process ID, name of the source file or both.                   */
+/* arg(1) must be either 'PID', 'SOURCE' or 'BOTH'                           */
+procedure
+
+Requested=arg(1)
+
+
+/*    ******************************************************************     */
+/* Old Way, using REXLIB.  For some reason the dosprocinfo() doesn't always  */
+/* work.  Heck if I know why.   Doug Rickman Sept. 1, 1999                   */               
+/* Get name of executing program file.                                       */
+/* parse value parsefn(dosprocinfo('n')) with drive  path exe extension      */
+/*    ******************************************************************     */
+
+/* Get the process ID, use it to find the name of the process.               */
+ProcessInfo = rxprocid()
+parse var ProcessInfo ProcessID . .
+ProcessIDhex=d2x(ProcessID)
+
+rc = RxQProcStatus(ProcessInfo.)
+
+do i = 1 to ProcessInfo.0P.0
+  if translate(strip(ProcessInfo.0P.i.1,'L','0')) = ProcessIDhex then do     
+     Source=ProcessInfo.0P.i.6
+     leave i
+     end
+   end i
+
+if i> ProcessInfo.0P.0 then do
+   message='Current process name not found.  Something is very wrong.',
+      'I am in ProcessNameN_ID_is.  Call Doug.'
+   response=VpMessageBox(window,'Bad news, Dude!',message)
+   return 0
+   end
+
+drop ProcessInfo. ProcessInfo
+
+select
+   when Requested='SOURCE' then return Source
+   when Requested='PID' then return ProcessID
+   when Requested='BOTH' then return ProcessID Source
+   otherwise say 'Doug is an idiot. He did not reuqest a valid return',
+      'from ProcessNameN_ID_is.'
+   end /* select */
+
+return 0
+

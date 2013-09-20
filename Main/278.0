@@ -1,0 +1,32 @@
+/* Menu events - Code to State */
+Arg window self
+
+/* Is the FIPS file where it is supposed to be? */
+if dosisfile(FIPSFile) then nop
+else do
+   Txt1 = 'You are going to tell me where it is, or else ... '
+   Txt2 = 'This requires use of the file "FIPS_codes.txt"'
+   response=VpMessageBox(window,Txt1,Txt2)
+   
+   FIPSFile = VpFileDialog(window,'OPEN','FIPS_codes.txt','Open File')
+   IF LENGTH(FIPSFile) = 0 THEN return 0
+
+   rc=sysini(INIFile,MasterM,'FIPSFile',FIPSFile)
+   end
+
+index=VpGetIndex(window,'ORDER','SELECTED',0)
+
+index = strip(Order.Index)
+if datatype(index,'W')\=1 then do
+   Txt1 = 'The job is not going to get done this way.'
+   Txt2 = 'This field not in input database.'
+   response=VpMessageBox(window,Txt1,Txt2)
+   return 0
+   end
+
+RecordN = VpGetItemValue(window,'RECORD_NUMBER')
+
+
+/* Open the form G:\source\VisProSource\dbf_edit\parse */
+FIPSWindowID=VpOpenForm(window, 258,'STATE_N_COUNTY' index RecordN)
+CALL VpItem window,'MAGIC_DLG_FIPS','DISABLE'

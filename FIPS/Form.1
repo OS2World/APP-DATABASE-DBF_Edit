@@ -1,0 +1,60 @@
+/* Event Form events, Opened */
+SubRoutineHistory = 'FIPSPanel_OpenEvent' SubRoutineHistory
+
+Arg window 
+
+parse var topic topic index RecordN
+
+/* Check for identical names. */
+do i = 1 to dbfin.fieldcount
+   v = dbfin.fieldname.i
+   if STATENAME = v then do
+      Txt1 = 'This will never do!'
+      Txt2 = 'The field name "STATENAME" is already used by field 'i
+      parse var SubRoutineHistory . SubRoutineHistory
+      response=VpMessageBox(window,Txt1,Txt2)
+      return 0
+      end
+   if COUNTYNAME = v then do
+      Txt1 = 'This will never do!'
+      Txt2 = 'The field name "COUNTYNAME" is already used by field 'i
+      parse var SubRoutineHistory . SubRoutineHistory
+      response=VpMessageBox(window,Txt1,Txt2)
+      return 0
+      end
+   end i
+
+
+/* Set item value DLG_CODE Entry Field */
+CALL VpSetItemValue window,'DLG_CODE','Reading in the FIPS Codes.'
+
+if State.1  = "Alabama" then nop
+else do i = 1
+   /* Read the FIPSFile */
+   data = linein(FIPSFile)
+   interpret data
+   if lines(FIPSFile)=0 then leave i
+   end i
+
+/* Get the DLG code. */
+rc = rexxbase_opendbf("dbfin")
+MagicReturn=MagicRoutines_FIPSState_N_County(dbfin,index,topic,RecordN)
+rc=rexxbase_closedbf("dbfin")
+
+if left(MagicReturn,1)\=1 then do
+   CALL VpSetItemValue window,'STATE','ERRROR'
+   CALL VpSetItemValue window,'COUNTY','ERRROR'
+   return 0
+   end
+
+/* Set item value DLG_CODE Entry Field */
+
+parse var MagicReturn . StateKey CountyKey
+CALL VpSetItemValue window,'DLG_CODE',right(StateKey,4,'0')|| ':' || right(CountyKey,4,'0')
+CALL VpSetItemValue window,'STATE',State.StateKey
+CALL VpSetItemValue window,'COUNTY',County.StateKey.CountyKey
+
+parse var SubRoutineHistory . SubRoutineHistory
+
+return 1
+

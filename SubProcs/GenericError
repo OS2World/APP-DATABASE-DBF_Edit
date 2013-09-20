@@ -1,0 +1,157 @@
+/* --- begin subroutine - GenericError:                         -------------*/
+/* A generic error handler.  The user will get information about the error   */
+/* and processing will continue.  Hopefully the calling routine will be able */
+/* to handle the fact something is messed up.                                */
+/*                                                                           */
+/* This routine is designed to be used within a generic REXX program or in a */
+/* VisProRexx program.  It will handle VisProRexx routines when executed in  */
+/* testing mode, i.e. when doing a "CNTRL-R" while editing a VisProRexx      */
+/* program, and when running a VisProRexx .exe.  If this is used in a        */
+/* VisProRexx program a dialog box will provide the information to the user, */
+/* otherwise the say instruction is use.                                     */
+/*                                                                           */
+/* Returns the condition and line number.  Example: SYNTAX Error: 3023       */
+/* The general form of the return is:                                        */
+/*    condition('c') 'Error:' SourceLineN_generating_error                   */
+/*                                                                           */
+/* With three exceptions variables used internal to this routine start with  */
+/* the string "GenericError."  Example:  "GenericError.1SourceLineN"         */
+/* Note that tails of "GenericError." all start with the character "1".      */
+/* These are all dropped before the routine returns.                         */
+/*    Exception 1: the variable "RC".  I figured this one was surely safe.   */
+/*    Exception 2: "GenericErrorQUIET".  If this equals 'YES' then the       */
+/*       output to the user is suppressed.  GenericErrorQUIET should be set  */
+/*       somewhere in the main program.  If not set it is = 'NO'.            */
+/*    Exception 3: "SubRoutineHistory".  This is modified by each subroutine.*/
+/*       and is a record of which subroutines were called and the order.     */
+/*       GenericError will display this variable's contents if it has been   */
+/*       set.  GenericError then decrements this when it returns. If it has  */
+/*       not been set or it equals 'Unknown' then it will be dropped before  */
+/*       GenericError returns.                                               */
+/*                                                                           */
+/* Programmer's notes:                                                       */
+/* I created this because I've a large suite of binary files which I must    */
+/* read and decipher.  The files are buggy and trying to handle all possible */
+/* syntax errors was too difficult.  Therefore a graceful syntax handler was */
+/* needed.  I realized that what I created was not specific to syntax and    */
+/* could be used generically if desired.                                     */
+/*                                                                           */
+/* SEE THE NOTE AT THE END OF THIS SUBROUTINE IF USING VISPROREXX!           */
+/*                                                                           */
+/* Doug Rickman May 8, 2000, mod. May 16,2000, May 23, 2000                  */
+
+GenericError:
+
+GenericError.1SourceLineN     = SIGL
+GenericError.1ReturnErrorCode = RC
+
+/* Default values.  These will be changed if program is not VisProREXX code. */
+GenericError.1VisProRexx = 'YES'
+GenericError.1Offset     = 2
+GenericError.1LineFeed   = '0a'x           /* Some systems may need '0d0a'x  */
+
+parse source . . GenericError.1Source
+
+parse value parsefn(GenericError.1Source) with,
+   GenericError.1drive,
+   GenericError.1path,
+   GenericError.1exe,
+   GenericError.1extension
+       
+/* Read the source file into memory. */
+GenericError.1Size=stream(GenericError.1Source,'c','query size')
+GenericError.1rc  =stream(GenericError.1Source,'c','open read')
+GenericError.1Data=charin(GenericError.1Source,,GenericError.1Size)
+GenericError.1rc  =stream(GenericError.1Source,'c','close')
+
+/* Find where to start.  A VisProRexx program adds complication.             */
+/* We are looking for a string VisPro uses at the start of a program.  But   */
+/* we have to dodge the fact that the same string is in the comment block at */
+/* the end of this subroutine.                                               */
+
+GenericError.1Start  = pos('_VPAppHandle = VpInit()'  ,GenericError.1data)
+GenericError.1Startb = pos("'_VPAppHandle = VpInit()'",GenericError.1data)
+if GenericError.1Startb = GenericError.1Start -1 then do
+   GenericError.1VisProRexx = 'NO'
+   GenericError.1start      = 1
+   GenericError.1Offset     = 0
+   GenericError.1LineFeed   = '0d0a'x
+   end
+parse var GenericError.1data . =(GenericError.1Start) GenericError.1Data
+
+/* Get the offending line. */
+GenericError.1v = strip(sourceline(GenericError.1SourceLineN))
+
+/* Get message for this error code. */
+select
+   when GenericError.1ReturnErrorCode='RC' then do 
+      GenericError.1rc=' '
+      GenericError.1mesg=' '
+      end
+   
+   /* If there is special handling for certain error codes, insert them here.*/
+      
+   otherwise GenericError.1mesg=sysgetmessage(GenericError.1ReturnErrorCode)
+   end /* select */
+
+/* The subroutines used to get to the problem were ... */
+if SubroutineHistory = 'SUBROUTINEHISTORY' then SubroutineHistory = 'Unknown'
+
+/* Build the text of the error message. */
+GenericError.1L.1  = 'A serious REXX ERROR has occurred!  I do not know what.'          GenericError.1LineFeed
+GenericError.1L.2  =                                                                    GenericError.1LineFeed
+GenericError.1L.3  = "Other information for a programmer's use:"                        GenericError.1LineFeed
+GenericError.1L.4  = 'The line that generated this error is:' GenericError.1SourceLineN GenericError.1LineFeed
+GenericError.1L.5  = '"' GenericError.1v '"'                                            GenericError.1LineFeed
+
+GenericError.1L.6  =                                                                    GenericError.1LineFeed
+GenericError.1L.7  = 'Subroutine history to point of failure, most recent first:'       GenericError.1LineFeed
+GenericError.1L.8  = SubroutineHistory                                                  GenericError.1LineFeed
+GenericError.1L.9  =                                                                    GenericError.1LineFeed
+GenericError.1L.10 = 'Condition:'  condition('c')                                       GenericError.1LineFeed
+
+GenericError.1L.11 = 'Instruction:' condition('i')                                      GenericError.1LineFeed
+GenericError.1L.12 = 'Description:' condition('d')                                      GenericError.1LineFeed
+GenericError.1L.13 = 'Status:' condition('s')                                           GenericError.1LineFeed
+GenericError.1L.14 = 'RC: 'GenericError.1ReturnErrorCode  GenericError.1mesg            GenericError.1LineFeed
+GenericError.1L.15 =                                                                    GenericError.1LineFeed
+
+GenericError.1L.16 = 'Good luck!'
+
+GenericError.1L.0=16
+
+GenericError.1message = ''
+do i = 1 to GenericError.1L.0
+   GenericError.1message = GenericError.1message GenericError.1L.i
+   end i
+
+/* Now output as directed. */
+select /* Options are Quiet, VisPro, Say */
+   when GenericErrorQUIET = 'YES' then nop
+   when GenericError.1VisProRexx = 'YES' then do
+      txt1 = 'Oops! Oh now what is the problem! ______________________________'
+      txt2 = GenericError.1message
+      response=VpMessageBox(window,txt1,txt2)       
+   otherwise say GenericError.1message
+   end /* select */
+
+rc = condition('c') 'Error:' GenericError.1SourceLineN
+
+drop GenericError.   GenericError_LoopCounter
+if SubroutineHistory = 'Unknown' then drop SubRoutineHistory
+
+/* Remove record of subroutine whose crash got us here. */
+parse var SubRoutineHistory . SubRoutineHistory
+
+return rc
+
+/* THIS NOTE MUST NOT BE MOVED TO HEAD OF SUBROUTINE.  IT CONTAINS A COPY OF */
+/* THE KEY STRING USED TO RECOGNIZE A VISPROREXX PROGRAM.                    */
+/*                                                                           */
+/* GenericError searches the source for the string "_VPAppHandle = VpInit()" */
+/* which normally denotes the start of a VisProREXX program.  If your code   */
+/* also explicitly has this string and is not a VisProREXX program you will  */
+/* want to add an additional check or modify GenericError().                 */
+/*                                                                           */
+/* --- end  subroutine - GenericError:                          -------------*/
+/* --------------------------------------------------------------------------*/

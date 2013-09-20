@@ -1,0 +1,21 @@
+/* Event Menu events, Help */
+Arg window self
+
+Source=ProcessNameN_ID_is('SOURCE')
+if Source=0 then return 0
+
+parse value parsefn(Source) with drive path exe extension
+
+select
+   when path= "\VISPRORX\" & exe="RUNIT" then,
+      'start view 'MasterM'.HLP'
+   when DocumentationDirectory='\Documentation\' then,
+      'start view' MasterM'.HLP'
+   when dosisfile(DocumentationDirectory||MasterM'.HLP') then,
+      'start view 'DocumentationDirectory||MasterM'.HLP'
+   otherwise,
+      'start view 'MasterM'.HLP'
+   end /* select */   
+
+return
+

@@ -1,0 +1,63 @@
+/* Read "header" of .DBF file.                                               */
+/* Returns                                                                   */
+/*    1  - Everything OK.                                                    */
+/*   -1  - Error opening file.                                               */
+/*   -2  - This is not a DBAS file, it says it has more than 128 records.    */
+/*   -3  - An impossible field name.  This is not a DBAS file.               */
+/*                                                                           */
+/* Variables set: REXXBASE. FieldNameIn. TypeIn. LengthIn.                   */
+/* Doug Rickman July 6, 2000                                                 */
+
+procedure expose REXXBASE. FieldNameIn. TypeIn. LengthIn. SubRoutineHistory
+
+SubRoutineHistory = 'ReadDBASHeader' SubRoutineHistory 
+
+dbfin = arg(1)
+
+rc = rexxbase_closedbf("dbfin")
+rc1 = rexxbase_opendbf("dbfin")
+if rc1\='' then do
+   txt = 'Attempting to open .dbf file: 'rc1
+   rc2=DBASRexxBaseError(txt)
+   parse var SubRoutineHistory . SubRoutineHistory
+   return -1 rc1
+   end
+
+
+if dbfin.fieldcount>255 then do
+   rc = rexxbase_closedbf("dbfin")
+   parse var SubRoutineHistory . SubRoutineHistory
+   return -2 'The file 'dbfin' is not a DBAS file.'
+   end
+
+do j = 1 to dbfin.fieldcount
+   FieldNameIn.j = dbfin.fieldname.j
+   v           = dbfin.fieldname.j
+   if datatype(translate(v,'x','_'),'A') \=1 | length(v)>10 then do
+      rc = rexxbase_closedbf("dbfin")
+      parse var SubRoutineHistory . SubRoutineHistory
+      return -3 'The file 'dbfin' is not a DBAS file.'
+      end
+   /* say 'Field name = ' FieldNameIn.j */
+
+   w = translate(v)   
+   typeIn.j = dbfin.w.type
+   /* say "Fieldname "j ' type   = ' typeIn.j */
+   
+   lengthIn.j = dbfin.w.length
+   /* say "Fieldname "j ' length = ' lengthIn.j */
+   
+   if left(w,1)='_' & TypeIn.j='C' then
+      /* This dodges an error in REXXBase.dll */
+      lengthIn.j = trunc(lengthIn.j)
+
+   
+   end j
+
+rc = rexxbase_closedbf("dbfin")
+
+FieldNameIn.0 = dbfin.fieldcount
+TypeIn.0      = dbfin.fieldcount
+LengthIn.0    = dbfin.fieldcount
+
+return 1

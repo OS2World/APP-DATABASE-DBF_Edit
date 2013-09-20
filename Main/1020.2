@@ -1,0 +1,31 @@
+/* Event  INPUT, Leave */
+Arg window self
+
+SubRoutineHistory = 'Event_Input_Leave' SubRoutineHistory
+
+
+TempName = VpGetItemValue(window,'INPUT')
+
+IF LENGTH(TempName) \> 0 THEN do
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+if validname(TempName) \= 1 then  do
+   parse var SubRoutineHistory . SubRoutineHistory
+   return -1
+   end
+
+if in = '*.*' then do
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+
+OldName=sysini(INIFile,MasterM,'InputFile')
+if OldName=TempName then do
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+
+call InputSetup2 /* This is in the input menu item. */
+
+parse var SubRoutineHistory . SubRoutineHistory

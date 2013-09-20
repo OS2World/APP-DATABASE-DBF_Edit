@@ -1,0 +1,50 @@
+/* Event OK OK_PB, Clicked/selected */
+Arg window self
+
+/* How many other magic operations have we done? */
+Magic.0 = Magic.0+1
+i       = Magic.0
+Magic   = 'Magic.'||Magic.0
+
+FieldName1 = STATENAME
+FieldName2 = COUNTYNAME
+
+Magic.i = 'MagicRoutines_DLGFIPS2StateNCounty' index FieldName1 FieldName2
+
+Definition1=right('C',8) right('25',8)
+Definition2=right('C',8) right('25',8)
+
+ip1 = FieldName.0 + 1
+ip2 = FieldName.0 + 2
+if ip2>255 then do
+   txt1 = 'You can not do this!'
+   txt2 = 'You can not have more than 255 fields in a .DBF file.'
+   response=VpMessageBox(window,txt1,txt2)
+   return 0
+   end
+
+
+FieldName.ip1  = FieldName1
+FieldName.ip2  = FieldName2
+Definition.ip1 = Definition1
+Definition.ip2 = Definition2
+Order.ip1      = Magic
+Order.ip2      = Magic
+
+FieldName.0  = ip2
+Definition.0 = FieldName.0
+Order.0      = FieldName.0
+
+CALL VpDeleteItem ParentWindowID,'FIELDNAMES','ALL'
+CALL VpDeleteItem ParentWindowID,'DEFINITION','ALL'
+CALL VpDeleteItem ParentWindowID,'ORDER','ALL'
+
+index=VpAddItem(ParentWindowID, 'FIELDNAMES', 'LIST', 'FieldName.')
+index=VpAddItem(ParentWindowID, 'DEFINITION', 'LIST', 'Definition.')
+index=VpAddItem(ParentWindowID, 'ORDER', 'LIST', 'Order.')
+
+CALL VpSelect ParentWindowID,'FIELDNAMES',1,1
+CALL VpSelect ParentWindowID,'DEFINITION',1,1
+CALL VpSelect ParentWindowID,'ORDER',1,1
+
+CALL VpWindow window,'CLOSE'

@@ -1,0 +1,36 @@
+LibPathSearch:
+/* Search LibPath for DLL.                                                   */
+/* Returns                                                                   */
+/*  1 & Location - "1" and the first location in the libpath.                */
+/*  0 & Config.sys not found on boot drive.                                  */
+/* -1 & No LIBPATH statement in config.sys                                   */
+/* -2 & Number of entries in libpath, file sought not found.                 */
+
+in=arg(1)
+
+BootDrive=dosbootdrive()
+ConfigFile=BootDrive':\config.sys'
+if dosisfile(ConfigFile) then
+   Size=dosfsize(ConfigFile)
+else return 0
+
+rc=stream(ConfigFile,'c','open read')
+Data=charin(ConfigFile,,Size)
+rc=stream(ConfigFile,'c','close')
+
+Data=translate(Data)
+
+Start=pos('0d0a'x || 'LIBPATH=',Data)
+if Start=0 then return -1  /* No LIBPATH statement. */
+
+End=pos('0d0a'x,Data,Start+1)
+Data=substr(Data,Start+10,End-Start-2)
+
+do i=1
+   parse var Data LibPath.i ';' Data
+   if dosisfile(LibPath.i'\'in) then return 1 LibPath.i
+   if Data='' then leave i
+   end i
+LibPath.0=i
+return -2 LibPath.0
+

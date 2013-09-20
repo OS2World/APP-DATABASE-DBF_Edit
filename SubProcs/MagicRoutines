@@ -1,0 +1,74 @@
+/* The Magic routines.                                                       */
+
+/* Parse a field using a string.                                             */
+MagicRoutines_ParseString:
+procedure expose dbfin. ReturnValue.
+SubRoutineHistory = 'MagicRoutines_ParseString' SubRoutineHistory
+
+dbfin    = arg(1)
+index    = arg(2)
+ParseKey = arg(3)
+RecordN  = arg(4)
+
+rc=rexxbase_GoToRecord("dbfin",RecordN)
+
+v = strip(dbfin.FieldName.index)
+v = dbfin.v
+
+parse var v ReturnValue.1 (ParseKey) ReturnValue.2
+ReturnValue.0 = 2
+return 1
+
+/*     -    -    -    -    -    -    -    -    -    -    -    -    -        */
+
+/* Parse a field using a position.                                           */
+MagicRoutines_ParsePosition:
+procedure expose dbfin. ReturnValue.
+SubRoutineHistory = 'MagicRoutines_ParsePosition' SubRoutineHistory
+
+dbfin    = arg(1)
+index    = arg(2)
+ParseKey = arg(3)
+RecordN  = arg(4)
+
+rc=rexxbase_GoToRecord("dbfin",RecordN)
+
+v = strip(dbfin.FieldName.index)
+v = dbfin.v
+
+parse var v ReturnValue.1 =(ParseKey) ReturnValue.2
+ReturnValue.0 = 2
+return 1
+
+/*     -    -    -    -    -    -    -    -    -    -    -    -    -        */
+
+MagicRoutines_FIPSState_N_County:
+procedure expose dbfin. ReturnValue.
+SubRoutineHistory = 'MagicRoutines_ParsePosition' SubRoutineHistory
+
+dbfin    = arg(1)
+index    = arg(2)
+Target   = arg(3)
+RecordN  = arg(4)
+
+rc=rexxbase_GoToRecord("dbfin",RecordN)
+
+v = strip(dbfin.FieldName.index)
+v = dbfin.v
+v = strip(v)
+
+parse var v StateKey ':' CountyKey
+
+StateKey  = strip(StateKey,   ,   )
+StateKey  = strip(StateKey,'L','0')
+CountyKey = strip(CountyKey,   ,   )
+CountyKey = strip(CountyKey,'L','0')
+
+return 1 StateKey CountyKey
+
+/*     -    -    -    -    -    -    -    -    -    -    -    -    -        */
+
+
+return 1
+
+/*     -    -    -    -    -    -    -    -    -    -    -    -    -        */

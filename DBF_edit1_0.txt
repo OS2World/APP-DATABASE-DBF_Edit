@@ -1,0 +1,35 @@
+                          Upload Information Template for Hobbes.nmsu.edu
+                          ===============================================
+
+        Archive Filename: DBF_edit1_0.zip 
+       Short Description: Edit fields of .dbf file.
+        Long Description: Edits dBASE files (.dbf) in ways that are are 
+                          exceptionally difficult to accomplish using 
+                          database programs.  Fields (i.e. columns) may be
+                          copied, renamed, moved, deleted, and redefined.
+                          "Magic" operations, which perform tasks defined 
+                          by the programmer, are also available. Programmers
+                          can add more such Magic routines.  .DBF files may
+                          also be exported/imported in a form that is 
+                          readily edited by a REXX program.
+
+      Proposed directory
+           for placement: /pub/os2/apps/database
+
+               Your name: Doug Rickman  
+           Email address: doug@hotrocks.msfc.nasa.gov
+    Program contact name: (same)
+   Program contact email: (same)
+             Program URL: (none) 
+
+      Would you like the
+   contact email address
+    included in listings? yes
+
+Operating System/Version: OS/2
+ Additional requirements: REXX interpreter
+
+                Replaces: 
+
+
+

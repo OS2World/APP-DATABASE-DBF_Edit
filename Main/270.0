@@ -1,0 +1,25 @@
+/* Menu events - Edit the definition */
+Arg window self
+
+index=VpGetIndex(window,'DEFINITION','SELECTED',0)
+if index=0  then return 0
+
+CALL VpItem window,'DEFINITION_NEW','ENABLE'
+CALL VpItem window,'NEW_OK','ENABLE'
+CALL VpItem window,'NEW_CANCEL','ENABLE'
+
+CALL VpItem window,'DEFINITION_NEW','SHOW'
+CALL VpItem window,'NEW_OK','SHOW'
+CALL VpItem window,'NEW_CANCEL','SHOW'
+
+
+CALL VpItem window,'DEFINITION_NEW','BACKCOLORRGB','16777160'
+rc=VpItem(window,'DEFINITION_NEW','SETSTYLEBIT', 5, 0)
+CALL VpSetItemValue window,'DEFINITION_NEW',Definition.index
+
+CALL VpItem window,'DEFINITION_NEW','FOCUS'
+
+CALL VpItem window,'DEFINITION','DISABLE'
+
+Mode = 'Replace Definition'
+

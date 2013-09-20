@@ -1,0 +1,40 @@
+/* Menu events - Insert new field*/
+
+index=VpGetIndex(window,'FIELDNAMES','SELECTED',0)
+if index=0  then return 0
+
+CALL VpItem window,'FIELDNAME_NEW','ENABLE'
+CALL VpItem window,'DEFINITION_NEW','ENABLE'
+CALL VpItem window,'NEW_OK','ENABLE'
+CALL VpItem window,'NEW_CANCEL','ENABLE'
+
+CALL VpItem window,'FIELDNAME_NEW','SHOW'
+CALL VpItem window,'DEFINITION_NEW','SHOW'
+CALL VpItem window,'NEW_OK','SHOW'
+CALL VpItem window,'NEW_CANCEL','SHOW'
+
+
+/* Insertion occurs after currently selected record. */
+Arg window self
+
+/* Set item background RGB color FIELDNAME_NEW Entry Field */
+CALL VpItem window,'FIELDNAME_NEW','BACKCOLORRGB','16777160'
+CALL VpItem window,'DEFINITION_NEW','BACKCOLORRGB','16777160'
+
+/* Set read only off FIELDNAME_NEW Entry Field */
+rc=VpItem(window,'FIELDNAME_NEW','SETSTYLEBIT', 5, 0)
+rc=VpItem(window,'DEFINITION_NEW','SETSTYLEBIT', 5, 0)
+
+CALL VpItem window,'FIELDNAME_NEW','FOCUS'
+
+CALL VpItem window,'FIELDNAMES','DISABLE'
+CALL VpItem window,'DEFINITION','DISABLE'
+
+/* Check the item  MENU_FIELDS_INSERT Menu Item */
+CALL VpSelect window,'MENU_FIELDS_MOVEUP',0
+CALL VpSelect window,'MENU_FIELDS_MOVEDOWN',0
+CALL VpSelect window,'MENU_FIELDS_COPY',0
+CALL VpSelect window,'MENU_FIELDS_EDIT',0
+CALL VpSelect window,'MENU_FIELDS_INSERT',1
+
+Mode = 'New'

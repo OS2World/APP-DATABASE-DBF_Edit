@@ -1,0 +1,88 @@
+/* Event Test TEST_PB, Clicked/selected */
+Arg window self
+
+/* Need to confirm that names are unique. */
+
+SubRoutineHistory = 'ParsePanel_Test_PB' SubRoutineHistory
+
+ParseKey = VpGetItemValue(window,'PARSE_KEY')
+if ParseKey='' then ParseKey = ' '
+
+rc = rexxbase_opendbf("dbfin")
+if topic = 'STRING' then do
+   rc=MagicRoutines_ParseString(dbfin,index,ParseKey,RecordN)
+   end
+else do 
+   rc=MagicRoutines_ParsePosition(dbfin,index,ParseKey,RecordN)
+   end
+rc=rexxbase_closedbf("dbfin")
+
+TempValueIn.1 = ReturnValue.1
+TempValueIn.2 = ReturnValue.2
+
+CALL VpSetItemValue window,'TEST_PART1',TempValueIn.1
+CALL VpSetItemValue window,'TEST_PART2',TempValueIn.2
+
+/* Now create a test database file. */
+
+TempFieldName.1  = translate(VpGetItemValue(window,'FIELDNAME1'))
+TempFieldName.2  = translate(VpGetItemValue(window,'FIELDNAME2'))
+TempDefinition.1 = translate(VpGetItemValue(window,'DEFINITION1'))
+TempDefinition.2 = translate(VpGetItemValue(window,'DEFINITION2'))
+TempFieldName.0   = 2
+TempDefinition.0  = 2
+
+/* Check for identical names. */
+do i = 1 to dbfin.fieldcount
+   v = dbfin.fieldname.i
+   if TempFieldName.1 = v then do
+      Txt1 = 'This will never do!'
+      Txt2 = 'The first field name is identical to the field 'i' name.'
+      parse var SubRoutineHistory . SubRoutineHistory
+      response=VpMessageBox(window,Txt1,Txt2)
+      return 0
+      end
+   if TempFieldName.2 = v then do
+      Txt1 = 'This will never do!'
+      Txt2 = 'The second field name is identical to the field 'i' name.'
+      parse var SubRoutineHistory . SubRoutineHistory
+      response=VpMessageBox(window,Txt1,Txt2)
+      return 0
+      end
+   end i
+
+DBFout.fieldcount = 2
+
+CALL VpSetItemValue window,'FIELDNAME1',TempFieldName.1
+CALL VpSetItemValue window,'FIELDNAME2',TempFieldName.2
+CALL VpSetItemValue window,'DEFINITION1',TempDefinition.1
+CALL VpSetItemValue window,'DEFINITION2',TempDefinition.2
+
+/* Now attempt to write a test .dbf file. */
+
+dbfout=dostempname(TempDirectory'\TstDBF??.DBF')
+
+rc=DBASWriteTest(dbfout,1)
+if rc \=1 then do
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+
+/* Now read back information in test file. */
+rc=DBASReadData(dbfout,'YES')
+
+do i = 1 to dbfin.recordcount
+   rc=rexxbase_ReadDBF("dbfin")
+   do j = 1 to dbfin.fieldcount
+      v   = dbfin.fieldname.j
+      TempValueOut.j = dbfin.v
+      end j
+   end i
+rc=rexxbase_closedbf("dbfin")
+
+CALL VpSetItemValue window,'TEST_PART1',TempValueOut.1
+CALL VpSetItemValue window,'TEST_PART2',TempValueOut.2
+
+rc=dosdel(dbfout)
+
+parse var SubRoutineHistory . SubRoutineHistory

@@ -1,0 +1,205 @@
+/* Check to see if the file exists.  If it exists does it have the correct   */
+/* specs: elements, lines, channels, datatype, bytes per element, writtable? */
+/* Returns:                                                                  */
+/*   0 - Something wrong with size or type of existing file.                 */
+/*   1 - All is well.                                                        */
+/*  -2 - File does not exist.                                                */
+/*  -3 - File could not be made ready.                                       */
+/*  -4 - Is not an ELAS file.                                                */
+/*  -5 - Something is wrong.  ReadELASMain did not return a 1.               */
+/*  -6 - The supplied file name is not syntactically valid.                  */
+/*  -7 - Initial element torocess less than file's initial element.          */
+/*  -8 - Last element to process is greater than file's last element.        */
+/*  -9 - Initial Line to process is less than file's initial line.           */
+/* -10 - Last line to process is greater than file's last line.              */
+/* -11 - Incorrect datatype code.                                            */
+/* -12 - Bytes per element is incorrect.                                     */
+/* -13 - Number of channels insufficient.                                    */
+/* -14 - File is not writable.                                               */
+/* -15 - Problem with header vs. file size.                                  */
+/*                                                                           */
+/* A blank may be passed for any of the arguments.  FileChecker will not     */
+/* check those arguments.                                                    */
+/*                                                                           */
+/* If the argument "QuietError" is set to 'YES' then no error message is     */
+/* shown to the user, otherwise the user gets a message box specifying the   */
+/* nature of the problem found.                                              */
+/*                                                                           */
+/* NONE OF THE VARIABLES USED ARE EXPOSED TO THE CALLING ROUTINE except      */
+/* Channels2PListin. which in this version is unused. Future may change this.*/
+/*                                                                           */
+/* The calling code will have to check else where, if necessary, to confirm  */
+/* that user wishes to over write existing data.                             */
+/* Doug Rickman May 29, 1999, mod. Dec. 14, 1999, mod. Jan 21, 2000          */
+/* mod. April 24, 2000 Added check for header vs. file size mismatch.        */
+
+procedure expose Channels2PListin. GenericErrorQUIET SubRoutineHistory
+
+FileName              =arg(1)
+QuietError            =arg(2)   /* either 'YES' or 'NO' or blank (which=NO). */
+InitialElement2P      =arg(3)   /* a number */
+InitialLine2P         =arg(4)   /* a number */
+LastElement2P         =arg(5)   /* a number */
+LastLine2P            =arg(6)   /* a number */
+DataTypeCode          =arg(7)   /* a number */
+NBperElement          =arg(8)   /* a number */
+NChannelsRequired     =arg(9)   /* a number */
+WritePermissionNeeded =arg(10)  /* either 'YES' or 'NO' or blank (which=NO). */
+
+SubRoutineHistory = 'ELASFileChecker' SubRoutineHistory
+
+/* Is the name syntactically correct? */
+rc=validname(FileName)
+if rc=0 then do
+   if QuietError\='YES' then do
+      message='The file name 'FileName' is not a valid file name.'
+      response=VpMessageBox(window,'ELASFileChecker Oops!',message)
+      end
+   parse var SubRoutineHistory . SubRoutineHistory
+   return -6
+   end
+   
+/* Is it a real file */
+if dosisfile(FileName) \=1 then do
+   if QuietError\='YES' then do
+      message='The file name 'FileName' is not a valid file name.'
+      response=VpMessageBox(window,'ELASFileChecker Oops!',message)
+      end
+   parse var SubRoutineHistory . SubRoutineHistory
+   return -2
+   end
+   
+/* We now know the file exists. */
+
+call ReadELASMain FileName
+rc=stream(FileName,'c','close') /* In case ReadELASMain bombed. */
+
+/* Is it an ELAS file? */
+select
+   when Result=1 then ReturnValue=1 /* All is well, so far! */
+   when Result='File could not be made ready.' then do
+      if QuietError\='YES' then do
+         message=FileName 'could not be made ready.  Several '
+         message=message||"things may cause this.  Common reasons: the file doesn't exist or it is locked by another process."
+         response=VpMessageBox(window,'ELASFileChecker Oops!',message)
+         end
+      parse var SubRoutineHistory . SubRoutineHistory
+      return -3
+      end   
+
+   when Result ='is not an ELAS file.' then do
+      if QuietError\='YES' then do
+         message=FileName' is not an ELAS file.'
+         response=VpMessageBox(window,'ELASFileChecker Oops!',message)
+         end
+      parse var SubRoutineHistory . SubRoutineHistory
+      return -4
+      end
+
+   when Result ='Problem with header vs. file size.' then do
+      if QuietError\='YES' then do
+         message=FileName' Problem with header vs. file size.  File is corrupt.'
+         response=VpMessageBox(window,'ELASFileChecker Oops!',message)
+         end
+      parse var SubRoutineHistory . SubRoutineHistory
+      return -15
+      end
+
+   otherwise do 
+      if QuietError\='YES' then do
+         message='Something is wrong.  ReadELASMain returned 'Result', indicating all is not well.'
+         response=VpMessageBox(window,'ELASFileChecker Oops!',message)
+         end
+      parse var SubRoutineHistory . SubRoutineHistory
+      return -5
+      end
+   end /* select */
+
+
+/* Compare the size and type of the file to what is needed. */
+if      InitialElement2P = '' then nop 
+else if InitialElement2P < InitialElement  then do
+   returnvalue= -7
+   if QuietError\='YES' then do
+      message='The InitialElement ('InitialElement') of the existing',
+      'file is not in the necessary range.'
+      response=VpMessageBox(window,'ELASFileChecker Oops!',message)
+      end
+   end
+
+if LastElement2P         = '' then nop 
+else if LastElement2P    > LastElement  then do
+   returnvalue= -8
+   if QuietError\='YES' then do
+      message='The LastElement ('LastElement') of the existing',
+      'file is not in the necessary range.'
+      response=VpMessageBox(window,'ELASFileChecker Oops!',message)
+      end
+   end
+
+if      InitialLine2P    = '' then nop 
+else if InitialLine2P    < InitialLine  then do
+   returnvalue= -9
+   if QuietError\='YES' then do
+      message='The InitialLine ('InitialLine') of the existing',
+      'file is not in the necessary range.'
+      response=VpMessageBox(window,'ELASFileChecker Oops!',message)
+      end
+   end
+
+if LastLine2P            = '' then nop 
+else if LastLine2P       > LastLine  then do
+   returnvalue= -10
+   if QuietError\='YES' then do
+      message='The LastLine ('LastLine') of the existing',
+      'file is not in the necessary range.'
+      response=VpMessageBox(window,'ELASFileChecker Oops!',message)
+      end
+   end
+
+if      DataTypeCode  = '' then nop 
+else if DataTypeCode \= DataTypeCode then do
+   returnvalue= -11
+   if QuietError\='YES' then do
+      message='The DataTypeCode ('DataTypeCode') of the existing',
+      'file is not correct.'
+      response=VpMessageBox(window,'ELASFileChecker Oops!',message)
+      end
+   end
+
+if      NBperElement  = '' then nop 
+else if NBperElement \= NBperElement then do
+   returnvalue= -12
+   if QuietError\='YES' then do
+      message='The number of bytes per element ('NBperElement') of the existing',
+      'file is not correct.'
+      response=VpMessageBox(window,'ELASFileChecker Oops!',message)
+      end
+   end
+   
+if NChannelsRequired      = "" then nop
+else if NChannelsRequired > NChannels then do
+   returnvalue= -13
+   if QuietError\='YES' then do
+      message='The number ('NChannels') of channels in the existing',
+      'file are not great enough. 'NChannelsRequired' are required.'
+      response=VpMessageBox(window,'ELASFileChecker Oops!',message)
+      end
+   end
+
+if WritePermissionNeeded    \= "YES" then nop
+else do
+   Attributes= dosdir(FileName,'A')
+   if pos('R',Attributes)>0 then do
+      returnvalue= -14
+      if QuietError\='YES' then do
+         message='It is not possible to write to this file.'
+         response=VpMessageBox(window,'ELASFileChecker Oops!',message)
+         end
+      end
+   end
+
+parse var SubRoutineHistory . SubRoutineHistory
+
+return returnvalue
+

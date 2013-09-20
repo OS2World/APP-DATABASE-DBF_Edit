@@ -1,0 +1,137 @@
+/* Menu events - Import - REXX */
+/* Import a .DBF from a rexx compatible ASCII file. */
+
+SubRoutineHistory = 'Menu_File_Import' SubRoutineHistory
+
+Arg window self
+
+/* Get a name for the input text file.  */
+dbfTXTin = VpFileDialog(window,'OPEN','*.txt','Open dbfTXT file')
+IF LENGTH(dbfTXTin) = 0 THEN do
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+
+dbfTXT=sysini(INIFile,MasterM,'ImportFile')
+dbfTXT = VpFileDialog(window,'SAVE',dbfTXT,'Save database as .dbf')
+IF LENGTH(dbfTXT) = 0 THEN do
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+
+rc=sysini(INIFile,MasterM,'ImportFile',dbfTXT)
+
+rc=dosdel(dbfTXT)
+
+CALL VpItem window,'MESSAGE','FORECOLOR','RED'
+CALL VpSetItemValue window,'MESSAGE','Exporting database file.'
+
+  
+/* Read the input database structure. */
+data=linein(dbfTXTin)
+data='dbfTXT.'||strip(data)
+interpret data
+do i = 1 to dbfTXT.fieldcount
+   data=linein(dbfTXTin)
+   data='dbfTXT.'||strip(data)
+   interpret data               /* FieldName  */
+   
+   v = dbfTXT.fieldname.i
+   if left(v,1) = '_' then do
+      Txt1 = 'There is nothing I can do about this one.'
+      Txt2 = 'REXXBase can not import field 'i' properly. It starts with "_"'
+      response=VpMessageBox(window,Txt1,Txt2)
+      end
+
+   data=linein(dbfTXTin)
+   data='dbfTXT.'||strip(data)
+   interpret data               /* Type       */
+   parse var data . '=' v1 .
+
+   data=linein(dbfTXTin)
+   data='dbfTXT.'||strip(data)
+   interpret data               /* Length     */
+
+   parse var data . '=' v2 .
+   if v1='C' & v2>250 then do
+      Txt1 = 'My wish is your command, Oh Least One.'
+      Txt2 = 'The data in field 'dbfTXT.FieldName.i' will be shortened.',
+             '  See documentation.'
+      response=VpMessageBox(window,Txt1,Txt2)
+      end
+
+   data=linein(dbfTXTin)        /* blank line */
+   end i
+
+
+rc1=rexxbase_createdbf('dbfTXT') 
+if rc1\='' then do
+   txt= 'Attempting to create .dbf file: 'rc1
+   rc2=DBASRexxBaseError(txt)
+   rc=lineout(dbfTXTin)
+   CALL VpSetItemValue window,'MESSAGE','Crash and Burn while creating DBF!'
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+
+
+/* Read the input database. */
+data=linein(dbfTXTin)
+data='dbfTXT.'||strip(data)
+interpret data
+do i = 1 to dbfTXT.recordcount
+   trash = linein(dbfTXTin)
+   trash = linein(dbfTXTin)
+
+   do j = 1 to dbfTXT.fieldcount
+      data=linein(dbfTXTin)
+      data='dbfTXT.'||strip(data)
+      v=dbfTXT.FieldName.j
+      if dbfTXT.v.type='C' & dbfTXT.v.length>250 then do
+         parse var data v1 '=' v2
+         v2 = strip(v2,   ,   )
+         v2 = strip(v2,   ,'"')
+         v2 = strip(v2,'T',   )
+         if length(v2)>250 then do
+            v2 = strip(v2,'L',   )
+            if length(v2)>250 then do
+               BytesLost=length(v2)-250
+               say BytesLost' from record 'i', field: 'v1
+               v2=left(v2,250)
+               end
+            end            
+         v2='"'v2'"'
+         data= v1 '=' v2
+         end
+      
+      interpret data
+      
+      end j
+   rc=rexxbase_writedbf('dbfTXT')
+   if rc\='' then do
+      say 'Attempting to write test .dbf file: 'rc
+      rc=RexxBaseError()
+      CALL VpSetItemValue window,'MESSAGE','Crash and Burn while writing DBF!'
+      parse var SubRoutineHistory . SubRoutineHistory
+      return 0
+      end
+   CALL VpSetItemValue window,'MESSAGE',right(i,6)'/'left(dbfTXT.recordcount,6)
+   end i
+
+rc=rexxbase_closedbf("dbfTXT")
+rc=lineout(dbfTXTin)
+drop dbfTXT.
+
+CALL VpSetItemValue window,'MESSAGE',''
+
+
+Txt1 = 'Your wish is my command, Oh Great One.'
+Txt2 = 'Do you wish to make this the current input file for more processing?'
+response=VpMessageBox(window,Txt1,Txt2,'YESNO')
+if response = 'YES' then do
+   TempName = dbfTXT
+   call InputSetup2
+   end
+
+parse var SubRoutineHistory . SubRoutineHistory
+return 1

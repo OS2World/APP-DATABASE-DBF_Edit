@@ -1,0 +1,142 @@
+/* Event Menu events, ~Input 	CNTRL i */
+Arg window self
+
+SubRoutineHistory = 'Input' SubRoutineHistory
+
+TempName = VpFileDialog(window,'OPEN',In,'Input File')
+
+InputSetup1:
+
+IF LENGTH(TempName) \> 0 THEN do
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+if validname(TempName) \= 1 then  do
+   parse var SubRoutineHistory . SubRoutineHistory
+   return -1
+   end
+
+if in = '*.*' then do
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+   
+OldName   = VpGetItemValue(window,'INPUT')
+if OldName=TempName then do
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+   
+InputSetup2:
+
+in=TempName
+rc=sysini(INIFile,MasterM,'InputFile',in)
+
+CALL VpSetItemValue window,'INPUT',in
+CALL VpSetItemValue window,'MESSAGE',''
+CALL VpDeleteItem window,'FIELDNAMES','ALL'
+CALL VpDeleteItem window,'DEFINITION','ALL'
+CALL VpDeleteItem window,'ORDER','ALL'
+
+CALL VpItem window,'MESSAGE','FORECOLOR','RED'
+CALL VpSetItemValue window,'MESSAGE','Reading database file.'
+
+CALL VpItem window,'FIELDNAMES','DISABLE'
+CALL VpItem window,'DEFINITION','DISABLE'
+CALL VpItem window,'ORDER','DISABLE'
+
+CALL VpItem window,'RECORD_NUMBER','DISABLE'
+CALL VpItem window,'RECORD_CONTENTS','DISABLE'
+
+CALL VpItem window,'FIELDNAMES','HIDE'
+CALL VpItem window,'DEFINITION','HIDE'
+CALL VpItem window,'ORDER','HIDE'
+
+CALL VpItem window,'RECORD_NUMBER','HIDE'
+CALL VpItem window,'RECORD_CONTENTS','HIDE'
+CALL VpItem window,'RECORD_NUMBER_TXT','HIDE'
+CALL VpItem window,'OF_N_RECORDS_TXT','HIDE'
+
+Magic.0 = 0
+drop dbfin. FieldName. Definition. Order.
+
+/* Read the DBAS file header if possible.                   */
+rc=DBASReadHeader(in)
+parse var rc code message
+if code \=1  then do
+   Txt1 = 'REXXBase reports the following error information.'
+   Txt2 = message
+   response=VpMessageBox(window,Txt1,Txt2)
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+
+rc=arraycopy(FieldNameIn.,FieldName.)
+do j = 1 to FieldName.0
+   Definition.j=right(typeIn.j,8) right(lengthIn.j,8)
+   Order.j     =right(j,4)   
+   end j
+
+Definition.0 = FieldName.0
+Order.0      = FieldName.0
+
+CALL VpDeleteItem window,'FIELDNAMES','ALL'
+CALL VpDeleteItem window,'DEFINITION','ALL'
+CALL VpDeleteItem window,'ORDER','ALL'
+
+index=VpAddItem(window, 'FIELDNAMES', 'LIST', 'FieldName.')
+index=VpAddItem(window, 'DEFINITION', 'LIST', 'Definition.')
+index=VpAddItem(window, 'ORDER', 'LIST', 'Order.')
+
+CALL VpSelect window,'FIELDNAMES',1,1
+CALL VpSelect window,'DEFINITION',1,1
+CALL VpSelect window,'ORDER',1,1
+
+
+CALL VpSetItemValue window,'MESSAGE','Counting the number of deleted records.'
+/* Determine the numbers of good and deleted records. */
+rc=DBASReadData(in,'NO')
+
+parse var rc code RecordsTotal RecordsGood RecordsDeleted
+if code \=1  then do
+   Txt1 = 'REXXBase reports the following error information.'
+   Txt2 = RecordsTotal RecordsGood RecordsDeleted
+   response=VpMessageBox(window,Txt1,Txt2)
+   CALL VpSetItemValue window,'MESSAGE',''
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+
+if REXXBASE.SKIPDELETED = 'ON' then do
+   CALL VpSetRange window,'RECORD_NUMBER',1,RecordsGood
+   CALL VpSetItemValue window,'OF_N_RECORDS_TXT','of 'RecordsGood' records.' RecordsDeleted' deleted records'
+   end
+else do
+   CALL VpSetRange window,'RECORD_NUMBER',1,RecordsTotal
+   CALL VpSetItemValue window,'OF_N_RECORDS_TXT','of 'RecordsTotal' records.' RecordsDeleted' deleted records'
+   end
+
+
+CALL VpItem window,'FIELDNAMES','ENABLE'
+CALL VpItem window,'DEFINITION','ENABLE'
+CALL VpItem window,'ORDER','ENABLE'
+
+CALL VpItem window,'RECORD_NUMBER','ENABLE'
+CALL VpItem window,'RECORD_CONTENTS','ENABLE'
+
+CALL VpItem window,'FIELDNAMES','SHOW'
+CALL VpItem window,'DEFINITION','SHOW'
+CALL VpItem window,'ORDER','SHOW'
+
+CALL VpItem window,'RECORD_NUMBER','SHOW'
+CALL VpItem window,'RECORD_CONTENTS','SHOW'
+CALL VpItem window,'RECORD_NUMBER_TXT','SHOW'
+CALL VpItem window,'OF_N_RECORDS_TXT','SHOW'
+
+
+CALL VpItem window,'MESSAGE','FORECOLOR','RED'
+txt = 'There are 'RecordsGood' good records and 'RecordsDeleted' deleted records.'
+CALL VpSetItemValue window,'MESSAGE',txt
+
+
+parse var SubRoutineHistory . SubRoutineHistory

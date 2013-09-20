@@ -1,0 +1,16 @@
+/* Menu events - About */
+Arg window self
+
+/* Menu events - About */
+Arg window self
+message='Doug Rickman'  '0a'x,
+             || 'Global Hydrology and Climate Center'  '0a'x,
+             || 'Marshall Space Flight Center/NASA   '  '0a'x,
+             || '977 Explorer Blvd.  '  '0a'x,
+             || 'Huntsville, Alabama 35806  '  '0a0a'x,
+             || '256-922-5889   '  '0a'x,
+             || 'doug@hotrocks.msfc.nasa.gov'  '0a0a'x,
+             || 'revision date/time:'   '0a'x,
+             || 'xx xxx xxxx xx:xx:xx'
+            
+response=VpMessageBox(window,'Blame',message)

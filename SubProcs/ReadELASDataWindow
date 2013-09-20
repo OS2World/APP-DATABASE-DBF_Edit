@@ -1,0 +1,107 @@
+/* This routine reads raster data in an ELAS file.  It is intended to read a */
+/* single window of data from n channels with each call.   Data are returned */
+/* in a compound array called Data.h.i.j, the tail is equal to the           */
+/* TempChannel.element.line number of the file. Channels read do not have to */
+/* contiguous or in order.  Channels read and their order returned is        */
+/* determined by the array Channels2PListin.  For example if                 */
+/*    Channels2PListin.0=4                                                   */
+/*    Channels2PListin.1=5                                                   */
+/*    Channels2PListin.2=2                                                   */
+/*    Channels2PListin.3=1                                                   */
+/*    Channels2PListin.4=7                                                   */
+/* Then the data in Data.1. will from channel 5, Data.2. will be from to     */
+/* channel 2, Data.3. from channel 1 and Data.4. from channel 7.             */
+/*                                                                           */
+/*
+This could be made faster by taking the select operation outside of the line
+loop.  For right now it is fast enough.
+
+Doug Rickman   August 3, 1998
+  add channel specific return May 30, 1999
+_______________________________________________________________ */
+procedure expose in Data.,
+		InitialElement2Pin LastElement2Pin InitialLine2Pin LastLine2Pin Channels2PListin.,
+		InitialElement     LastElement     InitialLine     LastLine     NChannels,
+		BperLine           NBperElement    DataTypeCode,
+		GenericErrorQUIET  SubRoutineHistory      
+
+SubRoutineHistory = 'ReadELASDataWindow' SubRoutineHistory
+
+/* Open the file, position and read the length needed */
+/* Loop on lines */
+/* Compute the offsets and length to grab */
+/* Parse the chunk read into individual values, convert and store in Data.i.j */
+/* Release the file */
+
+drop Data.
+
+Data.0=(LastElement2Pin-InitialElement2Pin+1)
+Data.0=Data.0*(LastLine2Pin-InitialLine2Pin+1)
+Data.0=Data.0*Channels2PListin.0
+
+rc=stream(in,'C','OPEN READ')
+
+ElementOffset= (InitialElement2Pin-InitialElement)*NBperElement
+do h = 1 to Channels2PListin.0
+   ChannelOffset=(Channels2PListin.h-1)*BperLine
+   do j = InitialLine2Pin to LastLine2Pin
+      LineOffset=NChannels*BperLine*(j-InitialLine)
+      Offset=LineOffset+ChannelOffset+ElementOffset+1024+1
+      Length=(LastElement2Pin-InitialElement2Pin+1)*NBperElement
+
+      rc=stream(in,'C','seek ='Offset)
+      data=charin(in,,length)
+      Step=NBperElement+1
+   
+      select
+         when DataTypeCode=1  then do  /* UNSIGNED INTEGER */
+            do i = InitialElement2Pin to LastElement2Pin 
+               parse var data Data.h.i.j =(Step) data
+               Data.h.i.j= x2d(c2x(Data.h.i.j))
+               end i
+            end /* when */
+
+         when DataTypeCode=16  then do  /* SINGLE PRECISION REAL */
+            do i = InitialElement2Pin to LastElement2Pin 
+               parse var data Data.h.i.j =(Step) data
+               Data.h.i.j= c2f(reverse(Data.h.i.j)) 
+               end i
+            end /* when */
+
+         when DataTypeCode=17  then do  /* DOUBLE PRECISION REAL */
+            do i = InitialElement2Pin to LastElement2Pin 
+               parse var data Data.h.i.j =(Step) data
+               Data.h.i.j= c2f(reverse(Data.h.i.j)) 
+               end i
+            end /* when */
+
+         when DataTypeCode=18  then do  /* SINGLE PRECISION COMPLEX */
+            response=VpMessageBox(window,"'Sorry, you're out of luck.",'Not implemented yet for this data type.')
+            end /* when */
+
+         when DataTypeCode=19  then do  /* DOUBLE PRECISION COMPLEX */
+            response=VpMessageBox(window,"'Sorry, you're out of luck.",'Not implemented yet for this data type.')
+            end /* when */
+
+         when DataTypeCode=131  then do  /* ASCII CHARACTERS */
+            response=VpMessageBox(window,"'Sorry, you're out of luck.",'Not implemented yet for this data type.')
+            end /* when */
+
+         when DataTypeCode=0 then do  /* MIXED OR UNSPECIFIED DATA TYPE */
+            response=VpMessageBox(window,"'Sorry, you're out of luck.",'Not implemented yet for this data type.')
+            end /* when */
+
+         otherwise nop /* SOMETHING IS WRONG WITH THE DATA TYPE CODE!!! */
+         end /* select */
+
+      end j /* Line loop */
+   end h /* Channel loop */
+
+/* close the file */
+rc=stream(in,'C','CLOSE')
+
+parse var SubRoutineHistory . SubRoutineHistory
+
+return 1
+
+

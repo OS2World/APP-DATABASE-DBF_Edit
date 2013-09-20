@@ -1,0 +1,25 @@
+/* Event Menu events, ~Output 	CNTRL o */
+Arg window self
+
+TempName = VpFileDialog(window,'OPEN',Out,'Output File')
+
+OutputSetup:
+
+
+IF LENGTH(TempName)    \> 0 THEN return 0
+if validname(TempName) \= 1 then return -1
+
+OldName=sysini(INIFile,MasterM,'OutputFile')
+if OldName=TempName then return 1 
+else do
+   Out=TempName
+   rc=sysini(INIFile,MasterM,'OutputFile',Out)
+   end
+
+if dosisfile(out) then do
+   message='The output file already exists.  It will be deleted when you',
+           'start the reformating.'
+   response=VpMessageBox(window,"You're going to regret this!",message)
+   end 
+
+CALL VpSetItemValue window,'OUTPUT',out

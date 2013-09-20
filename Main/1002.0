@@ -1,0 +1,24 @@
+/* Event Yes SKIPDELETED_CB, Clicked/selected */
+Arg window self
+
+
+/* Get button state SKIPDELETED_CB Check Box */
+if VpIsSelected(window,'SKIPDELETED_CB') then do
+   rc=sysini(INIFile,MasterM,'SKIPDELETED_CB',1)
+   CALL VpSetItemValue window,'SKIPDELETED_CB','Yes'      
+   RexxBase.SKIPDELETED = 'ON'
+   end
+else do
+   rc=sysini(INIFile,MasterM,'SKIPDELETED_CB',0)
+   CALL VpSetItemValue window,'SKIPDELETED_CB','No'
+   RexxBase.SKIPDELETED = 'OFF'
+   end
+   
+return 1
+
+ When RexxBase.SKIPDELETED  is set to 'ON' then all RexxBase functions used to retrieve 
+ records will not return a deleted record. This will cause either the next non-deleted 
+ record to be returned or a NOT FOUND condition to occur. 
+
+ When set to 'OFF', the default value, deleted records are returned. 
+

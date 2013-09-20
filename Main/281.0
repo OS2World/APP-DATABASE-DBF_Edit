@@ -1,0 +1,85 @@
+/* Menu events - Export - REXX */
+/* Export the .DBF in a rexx compatible ASCII file. */
+
+SubRoutineHistory = 'Menu_File_Export' SubRoutineHistory
+
+Arg window self
+
+/* Get name of input DBF */
+dbfin = VpGetItemValue(window,'INPUT')
+if dosisfile(dbfin) then nop
+else do
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+
+
+CALL VpItem window,'MESSAGE','FORECOLOR','RED'
+CALL VpSetItemValue window,'MESSAGE','Exporting database file.'
+
+dbfTXTout=sysini(INIFile,MasterM,'ExportFile')
+
+/* Get a name for the output text file.  */
+dbfTXTout = VpFileDialog(window,'SAVE',dbfTXTout,'Save DBF as text')
+IF LENGTH(dbfTXTout) = 0 THEN do
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+
+rc=sysini(INIFile,MasterM,'ExportFile',dbfTXTout)
+
+rc=dosdel(dbfTXTout)
+
+/* Read the input database structure. */
+rc = rexxbase_opendbf("dbfin")
+if rc\='' then do
+   rc=RexxBaseError()
+   parse var SubRoutineHistory . SubRoutineHistory
+   return 0
+   end
+
+
+
+rc=lineout(dbfTXTout,'FIELDCOUNT =' dbfin.fieldcount)
+   
+do j = 1 to dbfin.fieldcount
+   v          = translate(dbfin.fieldname.j)
+   TypeIn.j   = dbfin.v.type  
+   lengthIn.j = dbfin.v.length
+
+   if left(v,1)='_' & TypeIn.j='C' then
+      /* This dodges an error in REXXBase.dll */
+      lengthIn.j = trunc(lengthIn.j)
+
+   rc=lineout(dbfTXTout,right('FieldName.'j,20) '=' v)
+   rc=lineout(dbfTXTout,right(v'.type',20)   '=' TypeIn.j)
+   rc=lineout(dbfTXTout,right(v'.length',20) '=' LengthIn.j)
+   rc=lineout(dbfTXTout,' ')
+   end j
+
+rc=lineout(dbfTXTout,'RECORDCOUNT =' dbfin.recordcount)
+
+/* Write the output records. */
+do i = 1 to dbfin.recordcount
+   rc=lineout(dbfTXTout,' ')
+   rc=lineout(dbfTXTout,'Record Number = 'i)
+   rc=rexxbase_ReadDBF("dbfin")
+   do j = 1 to dbfin.fieldcount
+      v       = translate(dbfin.fieldname.j)
+      if dbfin.v.type='C' then
+         /* Convert double quotes to single. */
+         dbfin.v=translate(dbfin.v,"'",'"')
+      rc=lineout(dbfTXTout,right(v,15) '= "'dbfin.v'"')      
+      end j
+
+   CALL VpSetItemValue window,'MESSAGE',right(i,6)'/'left(dbfin.recordcount,6)
+
+   end i
+
+rc=rexxbase_closedbf("dbfin")
+rc=lineout(dbfTXTout)
+
+CALL VpSetItemValue window,'MESSAGE',''
+
+parse var SubRoutineHistory . SubRoutineHistory
+return 1
